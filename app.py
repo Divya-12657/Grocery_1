@@ -6,14 +6,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import jwt
 from functools import wraps
-from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grocery.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'your-secret-key'
+app.config['SECRET_KEY'] = os.urandom(24)
 
 db.init_app(app)
 
@@ -31,6 +30,7 @@ def token_required(f):
         return f(current_user, *args, **kwargs)
     return decorated
 
+# Auth routes
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
@@ -56,6 +56,7 @@ def login():
         return jsonify({'token': token, 'role': user.role})
     return jsonify({'message': 'Invalid credentials!'}), 401
 
+# Product routes
 @app.route('/products', methods=['GET'])
 def get_products():
     products = Product.query.all()
@@ -80,6 +81,7 @@ def add_product(current_user):
     db.session.commit()
     return jsonify({'message': 'Product added successfully!'})
 
+# Order routes
 @app.route('/orders', methods=['POST'])
 @token_required
 def create_order(current_user):
@@ -90,7 +92,6 @@ def create_order(current_user):
         delivery_address=data['delivery_address']
     )
     db.session.add(new_order)
-    db.session.commit()
     
     for item in data['items']:
         order_item = OrderItem(
@@ -115,10 +116,11 @@ def get_orders(current_user):
         'id': o.id,
         'status': o.status,
         'total_amount': o.total_amount,
-        'created_at': o.created_at.isoformat(),
+        'created_at': o.created_at,
         'delivery_address': o.delivery_address
     } for o in orders])
 
+# Admin routes
 @app.route('/admin/orders/<int:order_id>', methods=['PUT'])
 @token_required
 def update_order_status(current_user, order_id):
