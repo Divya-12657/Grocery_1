@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../../../config';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation }) {
   const [products, setProducts] = useState([]);
@@ -12,11 +13,21 @@ export default function HomeScreen({ navigation }) {
     fetchProducts();
   }, []);
 
+
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('http://192.168.0.165:5000/products');
-      setProducts(response.data);
+      const response = await axios.get(`${CONFIG.API_URL}/products`);
+      console.log('Fetched products:', response.data);
+  
+      // Make sure it's an array
+      if (Array.isArray(response.data)) {
+        setProducts(response.data);
+      } else {
+        console.warn('API did not return an array:', response.data);
+        setProducts([]); // fallback
+      }
     } catch (error) {
+      console.error('Error fetching products:', error);
       alert('Error fetching products');
     }
   };
@@ -31,7 +42,7 @@ export default function HomeScreen({ navigation }) {
         style={styles.cartButton}
         onPress={() => navigation.navigate('Cart', { cart })}
       >
-        <Text>Cart ({cart.length})</Text>
+      <Text>Cart ({cart.length})</Text>
       </TouchableOpacity>
       <FlatList
         data={products}

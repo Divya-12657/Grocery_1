@@ -56,17 +56,38 @@ import OrdersScreen from './(tabs)/screens/admin/OrdersScreen';
 import PaymentScreen from './(tabs)/screens/customer/PaymentScreen';
 import { AuthProvider } from './(tabs)/AuthContext';
 
+import RegisterScreen from './(tabs)/screens/RegisterScreen'; // Import the RegisterScreen
+// import LoginScreen from './(tabs)/screens/LoginScreen'; // Import LoginScreen
+import HomeScreen1 from './(tabs)/screens/Homescreen1';
+
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <AuthProvider>
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator initialRouteName="Home">
+
+      <Stack.Screen 
+          name="Home" 
+          component={HomeScreen1} 
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen 
+          name="Register" 
+          component={RegisterScreen} 
+          options={{ headerShown: false }}
+          options={{ title: 'Home' }}
+        />
+
+ 
         <Stack.Screen 
           name="Login" 
           component={LoginScreen} 
           options={{ headerShown: false }}
+          options={{ title: 'Home' }}
+
         />
         <Stack.Screen 
           name="CustomerHome" 

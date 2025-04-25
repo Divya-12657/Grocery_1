@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../../../config';
+
 
 export default function ProductsScreen() {
   const [products, setProducts] = useState([]);
@@ -19,7 +21,8 @@ export default function ProductsScreen() {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('http://192.168.0.165/products');
+      const response = await axios.get(`${CONFIG.API_URL}/products`);
+
       setProducts(response.data);
     } catch (error) {
       alert('Error fetching products');
@@ -30,11 +33,12 @@ export default function ProductsScreen() {
     try {
       const token = await AsyncStorage.getItem('token');
       console.log('Adding product...');
-      await axios.post('http://192.168.0.165:5000/products', {
+      await axios.post(`${CONFIG.API_URL}/products`, {
         ...newProduct,
         price: parseFloat(newProduct.price),
         stock: parseInt(newProduct.stock)
       }, {
+        
         headers: { Authorization: token }
       });
       setNewProduct({ name: '', description: '', price: '', stock: '', category: '' });

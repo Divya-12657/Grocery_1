@@ -1,25 +1,31 @@
-
-import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text } from 'react-native';
+import React, { useState,useContext} from 'react';
+import { View, TextInput, Button, StyleSheet, Text, Alert} from 'react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CONFIG from '../../config';
+import { AuthContext } from './../AuthContext'; 
+
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { setToken } = useContext(AuthContext);
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post('http://192.168.0.165:5000/login', {
+       console.log('Attempting login for:', email);
+       const response = await axios.post(`${CONFIG.API_URL}/login`, {
         email,
-        password
+      password
       });
-      await AsyncStorage.setItem('token', response.data.token);
+      const tokenWithPrefix = `Bearer ${response.data.token}`;
+      
+      await AsyncStorage.setItem('token', tokenWithPrefix);
       navigation.replace(response.data.role === 'Admin' ? 'AdminHome' : 'CustomerHome');
-    } catch (error) 
-    {console.log('errori dontknow')
-      alert('Login failed');
-    }
+    } catch (error) {
+    console.error('Login error:', error.response?.data || error.message);
+    Alert.alert('Login Failed', error.response?.data?.message || 'Invalid credentials');
+      }
   };
 
   return (
@@ -61,4 +67,4 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 5,
   },
-});
+}); 
