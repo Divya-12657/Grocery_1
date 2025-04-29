@@ -10,7 +10,8 @@ import uuid
 import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 # CORS(app)
@@ -32,15 +33,9 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # db.init_app(app)
 
-on_render = os.getenv('RENDER', False)
 
-if on_render:
-    # Use Render's database URI
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://grocery_ny4h_user:xoKEcQ8yAbwC188syO7XcijvLfEnYY4Z@dpg-cvslu03uibrs73eb5cd0-a/grocery_ny4h'
-else:
     # Use your local database URI
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://divs:foodforthought@localhost/Grocery_Market'
-
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.urandom(24)
 db.init_app(app)
