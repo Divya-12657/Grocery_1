@@ -59,6 +59,8 @@ import { AuthProvider } from './(tabs)/AuthContext';
 import RegisterScreen from './(tabs)/screens/RegisterScreen'; // Import the RegisterScreen
 // import LoginScreen from './(tabs)/screens/LoginScreen'; // Import LoginScreen
 import HomeScreen1 from './(tabs)/screens/Homescreen1';
+import Delivery_Screen from './(tabs)/screens/Delivery/Delivery_Screen';
+
 
 
 const Stack = createNativeStackNavigator();
@@ -119,6 +121,12 @@ export default function App() {
             name="Payment" 
             component={PaymentScreen} 
             options={{ title: 'Payment' }}
+          />
+
+          <Stack.Screen 
+            name="Delivery" 
+            component={Delivery_Screen} 
+            options={{ title: 'Delivery Screen' }}
           />
           {/* <Stack.Screen 
             name="OrderConfirmation" 

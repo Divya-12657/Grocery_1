@@ -186,21 +186,19 @@ const OrderScreen = () => {
           <Text style={styles.toggleText}>{isExpanded ? 'Hide Items' : 'Show Items'}</Text>
         </TouchableOpacity>
 
-        {isExpanded && orderItems && orderItems.length > 0 && (
-
-<FlatList
-data={orderItems}
-keyExtractor={(orderItem) => orderItem?.id?.toString() || 'default_key'} // Safe access
-renderItem={({ item }) => (
-  <View style={styles.orderItemContainer}>
-    <Text>{item.product_name}</Text>
-    <Text>Quantity: {item.quantity}</Text>
-    <Text>Price: ${item.price}</Text>
-  </View>
-)}
+        {isExpanded && orderItems?.length > 0 && (
+  <FlatList
+  data={orderItems}
+  keyExtractor={(orderItem) => orderItem?.id?.toString() || 'default_key'}
+  renderItem={({ item }) => (
+    <View style={styles.orderItemContainer}>
+      <Text>{item.product_name}</Text>
+      <Text>Quantity: {item.quantity}</Text>
+      <Text>Price: ${item.price}</Text>
+    </View>
+  )}
 />
-  
-        )}
+)}
       </View>
     );
   };

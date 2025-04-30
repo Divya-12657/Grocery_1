@@ -5,7 +5,7 @@ db = SQLAlchemy()
 
 class User(db.Model):
     __tablename__ = 'user'
-    __table_args__ = {'schema': 'grocery_market'}
+   # __table_args__ = {'schema': 'grocery_market'}
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -19,7 +19,7 @@ class User(db.Model):
 
 class Product(db.Model):
     __tablename__ = 'product'
-    __table_args__ = {'schema': 'grocery_market'}
+   # __table_args__ = {'schema': 'grocery_market'}
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -31,10 +31,12 @@ class Product(db.Model):
 
 class Orders(db.Model):
     __tablename__ = 'orders'
-    __table_args__ = {'schema': 'grocery_market'}
+   # __table_args__ = {'schema': 'grocery_market'}
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('grocery_market.user.id'), nullable=False)
+    # user_id = db.Column(db.Integer, db.ForeignKey('grocery_market.user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
     status = db.Column(db.String(20), default='pending')  # pending, confirmed, delivered
     total_amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -45,33 +47,38 @@ class Orders(db.Model):
 
 class OrderItem(db.Model):
     __tablename__ = 'order_item'
-    __table_args__ = {'schema': 'grocery_market'}
+   # __table_args__ = {'schema': 'grocery_market'}
 
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey('grocery_market.product.id'), nullable=False)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    # order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    # product_id = db.Column(db.Integer, db.ForeignKey('grocery_market.product.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)
 
 class Payment(db.Model):
     __tablename__ = 'payment'
-    __table_args__ = {'schema': 'grocery_market'}
+   # __table_args__ = {'schema': 'grocery_market'}
 
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False, unique=True)
+    # order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False, unique=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, unique=True)
+
     amount = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), default='pending')  # pending, completed, failed
     payment_method = db.Column(db.String(50))
     transaction_id = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('grocery_market.user.id'), nullable=False)
+    # user_id = db.Column(db.Integer, db.ForeignKey('grocery_market.user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 
 # # Payment model for database
 # class Payment(db.Model):
     
 #     __tablename__ = 'payment'
-#     __table_args__ = {'schema': 'grocery_market'}
+#    # __table_args__ = {'schema': 'grocery_market'}
 
 #     id = db.Column(db.Integer, primary_key=True)
 #     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)

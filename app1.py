@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from models import db, User, Product, Orders, OrderItem, Payment
@@ -34,6 +35,22 @@ app.config['SECRET_KEY'] = os.urandom(24)
 
 db.init_app(app)
 
+# def token_required(f):
+#     @wraps(f)
+#     def decorated(*args, **kwargs):
+#         token = request.headers.get('Authorization')
+#         if not token:
+#             return jsonify({'message': 'Token is missing!'}), 401
+#         try:
+#             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+#             current_user = User.query.get(data['user_id'])
+#             print(current_user)
+#         except:
+#             return jsonify({'message': 'Token is invalid!'}), 401
+            
+#         return f(current_user, *args, **kwargs)
+#     return decorated
+
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -62,6 +79,7 @@ def token_required(f):
     return decorated
 
 
+
 # Auth routes
 @app.route('/register', methods=['POST'])
 def register():
@@ -78,6 +96,16 @@ def register():
     db.session.add(new_user)
     db.session.commit()
     return jsonify({'message': 'User created successfully!'})
+
+# @app.route('/login', methods=['POST'])
+# def login():
+#     print("LOGIN request received")
+#     data = request.json
+#     user = User.query.filter_by(email=data['email']).first()
+#     if user and check_password_hash(user.password, data['password']):
+#         token = jwt.encode({'user_id': user.id}, app.config['SECRET_KEY'], algorithm="HS256")
+#         return jsonify({'token': token, 'role': user.role})
+#     return jsonify({'message': 'Invalid credentials!'}), 401
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -102,7 +130,6 @@ def login():
     
     print("Invalid login attempt")
     return jsonify({'message': 'Invalid credentials!'}), 401
-    
 # Product routes
 @app.route('/products', methods=['GET'])
 def get_products():
@@ -167,14 +194,14 @@ def create_order(current_user):
 
 @app.route('/orders', methods=['GET'])
 @token_required
-def get_orders(current_user):   
+def get_orders(current_user):
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 30, type=int)
         
-        # Admin sees all orders; customers only see their own; delivery sees all orders
-        if current_user.role in ['Admin', 'Delivery']:
-            print(f"{current_user.role} {current_user.name} retrieving all orders")
+        # Admin sees all orders; customers only see their own
+        if current_user.role == 'Admin':
+            print(f"Admin {current_user.name} retrieving all orders")
             orders_query = Orders.query.paginate(page=page, per_page=per_page, error_out=False)
         else:
             print(f"User {current_user.name} retrieving their orders")
@@ -255,140 +282,6 @@ def get_order_items(current_user, order_id):
         'user_id': order.user_id
     })
 
-# NEW: Delivery personnel routes
-@app.route('/delivery/orders', methods=['GET'])
-@token_required
-def get_delivery_orders(current_user):
-    """
-    Get orders that are ready for delivery with customer details
-    Only accessible to delivery personnel
-    """
-    if current_user.role != 'Delivery':
-        return jsonify({'message': 'Unauthorized!'}), 403
-        
-    try:
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
-        
-        # Get orders that are processed/ready for delivery
-        # Filter by order status (customizable based on your workflow)
-        orders_query = Orders.query.filter(
-            Orders.status.in_(['pending','delivery_failed'])
-        ).paginate(page=page, per_page=per_page, error_out=False)
-        
-        # Build order list with necessary delivery details
-        orders = []
-        for order in orders_query.items:
-            # Get customer details for delivery
-            customer = User.query.get(order.user_id)
-            
-            order_data = {
-                'id': order.id,
-                'status': order.status,
-                'total_amount': float(order.total_amount),
-                'created_at': order.created_at.isoformat(),
-                'delivery_address': order.delivery_address,
-                'user_id': order.user_id,
-                'customer_name': customer.name if customer else 'Unknown',
-                'customer_phone': customer.phone if customer else 'Not provided'
-            }
-            orders.append(order_data)
-        
-        response = {
-            'orders': orders,
-            'total_pages': orders_query.pages,
-            'current_page': orders_query.page,
-            'total_items': orders_query.total
-        }
-        
-        return jsonify(response)
-    except Exception as e:
-        print(f"Error retrieving delivery orders: {str(e)}")
-        return jsonify({'message': 'Error retrieving delivery orders', 'error': str(e)}), 500
-
-@app.route('/delivery/orders/<int:order_id>/items', methods=['GET'])
-@token_required
-def get_delivery_order_items(current_user, order_id):
-    """
-    Get detailed order items for a specific order for delivery personnel
-    """
-    if current_user.role != 'delivery':
-        return jsonify({'message': 'Unauthorized!'}), 403
-
-    order = Orders.query.get(order_id)
-    if not order:
-        return jsonify({'message': 'Order not found!'}), 404
-        
-    # Get customer info for delivery
-    customer = User.query.get(order.user_id)
-
-    order_items = OrderItem.query.filter_by(order_id=order_id).all()
-    items = []
-
-    for item in order_items:
-        product = Product.query.get(item.product_id)
-        if product:
-            items.append({
-                'product_id': product.id,
-                'product_name': product.name,
-                'product_image': product.image_url,
-                'quantity': item.quantity,
-                'price': float(item.price),
-                'total_price': float(item.quantity * item.price)
-            })
-
-    return jsonify({
-        'order_id': order_id,
-        'items': items,
-        'total_amount': float(order.total_amount),
-        'status': order.status,
-        'delivery_address': order.delivery_address,
-        'customer_name': customer.name if customer else 'Unknown',
-        'customer_phone': customer.phone if customer else 'Not provided'
-    })
-
-@app.route('/delivery/orders/<int:order_id>/update', methods=['PUT'])
-@token_required
-def update_delivery_status(current_user, order_id):
-    """
-    Update the status of an order by delivery personnel
-    """
-    if current_user.role != 'Delivery':
-        return jsonify({'message': 'Unauthorized!'}), 403
-        
-    order = Orders.query.get(order_id)
-    if not order:
-        return jsonify({'message': 'Order not found!'}), 404
-        
-    data = request.json
-    
-    # Validate that delivery personnel can only set specific statuses
-    allowed_statuses = ['out_for_delivery', 'delivered', 'delivery_failed']
-    if data['status'] not in allowed_statuses:
-        return jsonify({
-            'message': f'Invalid status! Delivery personnel can only set status to: {", ".join(allowed_statuses)}'
-        }), 400
-    
-    # Update order status
-    previous_status = order.status
-    order.status = data['status']
-    
-    # Add delivery notes if provided
-    if 'delivery_notes' in data:
-        # Assuming you might want to add a delivery_notes field to your Orders model
-        # For now, we could just print it
-        print(f"Delivery notes for order {order_id}: {data['delivery_notes']}")
-        
-    db.session.commit()
-    
-    # Notify admin about status change (you could implement a notification system)
-    print(f"Order {order_id} status changed from {previous_status} to {order.status} by delivery personnel {current_user.name}")
-    
-    return jsonify({
-        'message': 'Order status updated successfully!',
-        'order_id': order_id,
-        'new_status': order.status
-    })
 
 
 @app.route('/payment', methods=['POST'])
@@ -453,6 +346,7 @@ def make_payment(current_user):
         db.session.rollback()
         current_app.logger.error(f"UPI Payment generation error: {str(e)}")
         return jsonify({'message': f'Error processing payment: {str(e)}'}), 500
+
 
 
 with app.app_context():
