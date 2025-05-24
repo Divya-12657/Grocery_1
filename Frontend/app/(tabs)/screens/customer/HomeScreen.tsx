@@ -1,4 +1,4 @@
-
+//start of the logout
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import axios from 'axios';
@@ -13,12 +13,10 @@ export default function HomeScreen({ navigation }) {
     fetchProducts();
   }, []);
 
-
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${CONFIG.API_URL}/products`);
       console.log('Fetched products:', response.data);
-  
       // Make sure it's an array
       if (Array.isArray(response.data)) {
         setProducts(response.data);
@@ -36,14 +34,31 @@ export default function HomeScreen({ navigation }) {
     setCart([...cart, product]);
   };
 
+  const handleLogout = () => {
+    // Add logout logic here
+    // For example:
+    // AsyncStorage.removeItem('userToken');
+    // Or call your authentication service's logout function
+    
+    // Navigate to Login screen
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
+  };
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.cartButton}
-        onPress={() => navigation.navigate('Cart', { cart })}
-      >
-      <Text>Cart ({cart.length})</Text>
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <View style={styles.spacer}></View>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Text>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         data={products}
         keyExtractor={(item) => item.id.toString()}
@@ -60,6 +75,15 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
       />
+      
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.cartButton}
+          onPress={() => navigation.navigate('Cart', { cart })}
+        >
+          <Text>Cart ({cart.length})</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -68,6 +92,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  spacer: {
+    flex: 1,
+  },
+  footer: {
+    padding: 10,
+    marginTop: 10,
   },
   productCard: {
     padding: 10,
@@ -81,10 +118,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cartButton: {
-    padding: 10,
-    backgroundColor: '#ddd',
+    padding: 15,
+    backgroundColor: '#4285F4',
     borderRadius: 5,
-    marginBottom: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  logoutButton: {
+    padding: 10,
+    backgroundColor: '#ff6347', // Tomato color for logout
+    borderRadius: 5,
+    alignItems: 'center',
+    alignSelf: 'flex-end',
   },
   addButton: {
     marginTop: 5,

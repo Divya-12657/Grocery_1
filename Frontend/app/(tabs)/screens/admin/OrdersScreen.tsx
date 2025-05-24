@@ -1,90 +1,3 @@
-
-// import React, { useContext, useEffect, useState } from 'react';
-// import { View, Text, FlatList, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-// import axios from 'axios';
-// import CONFIG from '../../../config';
-// import { AuthContext } from '../../AuthContext';
-
-// const OrderScreen = () => {
-//   const { token } = useContext(AuthContext);
-//   const [orders, setOrders] = useState([]);
-//   const [loading, setLoading] = useState(true);
-
-//   const fetchOrders = async () => {
-//     if (!token) {
-//       Alert.alert('Unauthorized', 'No token found. Please log in again.');
-//       return;
-//     }
-
-//     try {
-//       const response = await axios.get(`${CONFIG.API_URL}/orders`, {
-//         headers: {
-//           Authorization: token, // Already includes "Bearer"
-//         },
-//       });
-//       setOrders(response.data.orders || response.data); // Handle both formats
-//     } catch (error) {
-//       console.error('Failed to fetch orders:', error.response?.data || error.message);
-//       Alert.alert('Error', 'Failed to fetch orders. Please try again.');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchOrders();
-//   }, []);
-
-//   const renderItem = ({ item }) => (
-//     <View style={styles.card}>
-//       <Text style={styles.title}>Order #{item.id}</Text>
-//       <Text>Customer: {item.customer_name}</Text>
-//       <Text>Total: ₹{item.total_price}</Text>
-//       <Text>Status: {item.status}</Text>
-//     </View>
-//   );
-
-//   if (loading) {
-//     return <ActivityIndicator size="large" style={{ flex: 1 }} />;
-//   }
-
-//   return (
-//     <View style={styles.container}>
-//       <FlatList
-//         data={orders}
-//         keyExtractor={(item) => item.id.toString()}
-//         renderItem={renderItem}
-//         ListEmptyComponent={<Text style={styles.empty}>No orders found.</Text>}
-//       />
-//     </View>
-//   );
-// };
-
-// export default OrderScreen;
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     padding: 15,
-//     backgroundColor: '#fff',
-//   },
-//   card: {
-//     backgroundColor: '#f2f2f2',
-//     padding: 15,
-//     borderRadius: 8,
-//     marginBottom: 10,
-//   },
-//   title: {
-//     fontWeight: 'bold',
-//     marginBottom: 5,
-//   },
-//   empty: {
-//     textAlign: 'center',
-//     marginTop: 20,
-//     fontSize: 16,
-//   },
-// });
-
 import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { AuthContext } from '../../AuthContext'; // Correct import for AuthContext
@@ -129,6 +42,7 @@ const OrderScreen = () => {
         },
       });
       const data = await response.json();
+      console.log("Fetched Orders:", data); // Log the fetched orders
       if (data && data.orders) {
         setOrders(data.orders); // Set orders from the response data
       }
@@ -144,10 +58,11 @@ const OrderScreen = () => {
       const response = await fetch(`${CONFIG.API_URL}/admin/orders/${orderId}/items`, {
         method: 'GET',
         headers: {
-          Authorization: `${token}`,
+          Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}`,
         },
       });
       const data = await response.json();
+      console.log("Fetched Order Items for Order ID", orderId, ":", data);  // Log the fetched order items
       if (data && data.items) {
         setOrderItemsMap((prevState) => ({
           ...prevState,
@@ -173,6 +88,8 @@ const OrderScreen = () => {
     const orderItems = orderItemsMap[item.id];
     const isExpanded = expandedOrders[item.id];
 
+    console.log("Rendering Order ID", item.id, "Order Items:", orderItems); // Log order items here
+
     return (
       <View style={styles.orderContainer}>
         <Text style={styles.orderTitle}>
@@ -186,19 +103,25 @@ const OrderScreen = () => {
           <Text style={styles.toggleText}>{isExpanded ? 'Hide Items' : 'Show Items'}</Text>
         </TouchableOpacity>
 
-        {isExpanded && orderItems?.length > 0 && (
-  <FlatList
-  data={orderItems}
-  keyExtractor={(orderItem) => orderItem?.id?.toString() || 'default_key'}
-  renderItem={({ item }) => (
-    <View style={styles.orderItemContainer}>
-      <Text>{item.product_name}</Text>
-      <Text>Quantity: {item.quantity}</Text>
-      <Text>Price: ${item.price}</Text>
-    </View>
-  )}
-/>
-)}
+        {isExpanded && (
+          <>
+            {orderItems && orderItems.length > 0 ? (
+              <FlatList
+                data={orderItems}
+                keyExtractor={(orderItem) => orderItem?.id ? orderItem.id.toString() : `default_key_${Math.random()}`}
+                renderItem={({ item }) => (
+                  <View style={styles.orderItemContainer}>
+                    <Text>{item.product_name}</Text>
+                    <Text>Quantity: {item.quantity}</Text>
+                    <Text>Price: ${item.price}</Text>
+                  </View>
+                )}
+              />
+            ) : (
+              <Text style={styles.noItemsText}>No items in this order.</Text>
+            )}
+          </>
+        )}
       </View>
     );
   };
@@ -244,6 +167,10 @@ const styles = StyleSheet.create({
     padding: 8,
     borderTopWidth: 1,
     borderTopColor: '#ddd',
+  },
+  noItemsText: {
+    fontStyle: 'italic',
+    color: 'gray',
   },
   loadingContainer: {
     flex: 1,

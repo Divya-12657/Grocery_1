@@ -1,6 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,current_app
 from flask_cors import CORS
-from models import db, User, Product, Orders, OrderItem, Payment
+from models import db, User, Product, Orders, OrderItem, Payment,Category
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import jwt
@@ -10,6 +10,10 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 from dotenv import load_dotenv
+from decimal import Decimal
+from datetime import datetime
+
+
 load_dotenv()
 
 
@@ -102,6 +106,48 @@ def login():
     
     print("Invalid login attempt")
     return jsonify({'message': 'Invalid credentials!'}), 401
+
+# Adding category when you are the admin 
+
+@app.route('/categories', methods=['POST'])
+@token_required
+def add_category(current_user):
+    if current_user.role != 'Admin':
+        return jsonify({'message': 'Unauthorized!'}), 403
+
+    data = request.json
+    category_name = data.get('name')
+
+    if not category_name:
+        return jsonify({'message': 'Category name is required'}), 400
+
+    existing_category = Category.query.filter_by(name=category_name).first()
+    if existing_category:
+        return jsonify({'message': 'Category already exists'}), 400
+
+    new_category = Category(
+        name=category_name,
+        description=data.get('description')
+    )
+
+    db.session.add(new_category)
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Category added successfully!',
+        'category': {
+            'id': new_category.id,
+            'name': new_category.name
+        }
+    })
+# get all the category names which is used in Products  as a filter
+
+@app.route('/categories', methods=['GET'])
+def get_categories():
+    categories = Category.query.all()
+    return jsonify([{'id': c.id, 'name': c.name} for c in categories])
+
+
     
 # Product routes
 @app.route('/products', methods=['GET'])
@@ -113,7 +159,7 @@ def get_products():
         'description': p.description,
         'price': p.price,
         'stock': p.stock,
-        'category': p.category,
+        'category': p.category_obj.name,
         'image_url': p.image_url
     } for p in products])
 
@@ -124,45 +170,395 @@ def add_product(current_user):
         print(f"Current User Role: {current_user.role}")  # Debugging log
         return jsonify({'message': 'Unauthorized!'}), 403
     data = request.json
-    new_product = Product(**data)
+    category_name = data.get('category')
+    if not category_name:
+        return jsonify({'message': 'Category is required'}), 400
+    
+    # Check if category exists, else create
+    category = Category.query.filter_by(name=category_name).first()
+    if not category:
+        category = Category(name=category_name)
+        db.session.add(category)
+        db.session.commit()
+
+    
+    # new_product = Product(**data)  This was the previous to unpack the data 
+    # Remove 'category' key so **data does not include it
+    product_data = {k: v for k, v in data.items() if k != 'category'}
+    new_product = Product(**product_data, category_id=category.id)
     db.session.add(new_product)
     db.session.commit()
     return jsonify({'message': 'Product added successfully!'})
+# Edit prooduct name or stock or price 
 
+@app.route('/products/<int:product_id>', methods=['PUT'])
+@token_required  # if this route is protected
+def update_product(current_user, product_id):
+    data = request.get_json()
+    product = Product.query.get(product_id)
+
+    if not product:
+        return jsonify({'message': 'Product not found'}), 404
+
+    # Update fields if present in request
+    product.name = data.get('name', product.name)
+    product.description = data.get('description', product.description)
+    product.price = data.get('price', product.price)
+    product.stock = data.get('stock', product.stock)
+
+    db.session.commit()
+
+    return jsonify({'message': 'Product updated successfully'})
+
+@app.route('/products/<int:product_id>', methods=['DELETE'])
+@token_required  # if protected
+def delete_product(current_user, product_id):
+    product = Product.query.get(product_id)
+
+    if not product:
+        return jsonify({'message': 'Product not found'}), 404
+
+    db.session.delete(product)
+    db.session.commit()
+
+    return jsonify({'message': 'Product deleted successfully'})
+
+
+
+
+
+# @app.route('/orders', methods=['POST'])
+# @token_required
+# def create_or_update_order(current_user):
+#     try:
+#         data = request.get_json()
+#         delivery_address = data.get('delivery_address')
+#         items = data.get('items')
+
+#         if not items or not isinstance(items, list):
+#             return jsonify({'error': 'No items provided'}), 400
+
+#         # Check for existing pending order
+#         order = Orders.query.filter_by(user_id=current_user.id, status='pending').first()
+
+#         if order:
+#             print(f"Updating existing order ID: {order.id}")
+
+#             if delivery_address:
+#                 order.delivery_address = delivery_address
+
+#             total_added = Decimal('0.00')
+
+#             for item in items:
+#                 product_id = item.get('product_id')
+#                 quantity = int(item.get('quantity', 1))
+#                 price = Decimal(str(item.get('price', 0)))
+
+#                 if not product_id or quantity <= 0 or price <= 0:
+#                     return jsonify({'error': 'Invalid item details'}), 400
+
+#                 existing_item = OrderItem.query.filter_by(order_id=order.id, product_id=product_id).first()
+#                 if existing_item:
+#                     existing_item.quantity += quantity
+#                     existing_item.price += float(price) * quantity  # Assuming `price` is per unit
+#                 else:
+#                     order_item = OrderItem(
+#                         order_id=order.id,
+#                         product_id=product_id,
+#                         quantity=quantity,
+#                         price=float(price) * quantity
+#                     )
+#                     db.session.add(order_item)
+
+#                 total_added += price * quantity
+
+#             order.total_amount = Decimal(str(order.total_amount)) + total_added
+#             db.session.commit()
+
+#             print(f"Updated total amount: {order.total_amount}")
+
+#             return jsonify({
+#                 'message': 'Items added to existing pending order',
+#                 'order_id': order.id,
+#                 'added_amount': str(total_added),
+#                 'total_amount': str(order.total_amount)
+#             }), 200
+
+#         else:
+#             # Create new order
+#             total_amount = Decimal('0.00')
+#             for item in items:
+#                 quantity = int(item.get('quantity', 1))
+#                 price = Decimal(str(item.get('price', 0)))
+#                 total_amount += price * quantity
+
+#             order = Orders(
+#                 user_id=current_user.id,
+#                 delivery_address=delivery_address,
+#                 total_amount=total_amount,
+#                 status='pending'
+#             )
+#             db.session.add(order)
+#             db.session.flush()  # Get order.id before committing
+
+#             for item in items:
+#                 quantity = int(item.get('quantity', 1))
+#                 price = Decimal(str(item.get('price', 0)))
+#                 order_item = OrderItem(
+#                     order_id=order.id,
+#                     product_id=item['product_id'],
+#                     quantity=quantity,
+#                     price=float(price) * quantity
+#                 )
+#                 db.session.add(order_item)
+
+#             db.session.commit()
+
+#             print(f"Created new order ID: {order.id} with total: {total_amount}")
+
+#             return jsonify({
+#                 'message': 'New order created',
+#                 'order_id': order.id,
+#                 'total_amount': str(total_amount)
+#             }), 201
+
+#     except Exception as e:
+#         db.session.rollback()
+#         print("Exception occurred:", str(e))
+#         return jsonify({'error': str(e)}), 500
 
 @app.route('/orders', methods=['POST'])
 @token_required
-def create_order(current_user):
-    # Debug information
-    print(f"Creating order for: User ID={current_user.id}, Name={current_user.name}, Role={current_user.role}")
-    print(f"Token info: {request.headers.get('Authorization')}")
-    
+def create_or_update_order(current_user):
+    try:
+        data = request.get_json()
+        delivery_address = data.get('delivery_address')
+        items = data.get('items')
+
+        if not items:
+            return jsonify({'error': 'No items provided'}), 400
+
+        order = Orders.query.filter_by(user_id=current_user.id, status='pending').first()
+
+        if not order:
+            order = Orders(
+                user_id=current_user.id,
+                delivery_address=delivery_address,
+                total_amount=Decimal('0.00'),
+                status='pending'
+            )
+            db.session.add(order)
+            db.session.flush()
+            print(f"Created new order with ID: {order.id}")
+        elif delivery_address:
+            order.delivery_address = delivery_address
+            print(f"Using existing order ID: {order.id}")
+
+        calculation_log = []
+
+        for item in items:
+            product_id = int(item['product_id'])
+            new_quantity = int(item['quantity'])
+            sent_unit_price = Decimal(str(item['price'])) if item['price'] > 0 else Decimal('0')
+
+            product = Product.query.get(product_id)
+            if not product:
+                return jsonify({'error': f'Product ID {product_id} not found'}), 404
+
+            actual_unit_price = Decimal(str(product.price))
+
+            # Only validate price if it was sent (not 0)
+            if sent_unit_price > 0 and abs(sent_unit_price - actual_unit_price) > Decimal('0.01'):
+                print(f"WARNING: Price mismatch for product {product_id}")
+                print(f"Sent: {sent_unit_price}, Actual: {actual_unit_price}")
+
+            unit_price = actual_unit_price
+            existing_item = OrderItem.query.filter_by(order_id=order.id, product_id=product_id).first()
+
+            if existing_item:
+                old_quantity = existing_item.quantity
+
+                if new_quantity == 0:
+                    # Remove item completely
+                    db.session.delete(existing_item)
+                    calculation_log.append({
+                        'product_id': product_id,
+                        'action': 'removed',
+                        'old_quantity': old_quantity,
+                        'new_quantity': 0,
+                        'unit_price': float(unit_price),
+                        'old_total': existing_item.price,
+                        'new_total': 0
+                    })
+
+                elif new_quantity != old_quantity:
+                    # Update quantity (can be increase or decrease)
+                    quantity_change = new_quantity - old_quantity
+                    existing_item.quantity = new_quantity
+                    existing_item.price = float(unit_price * new_quantity)
+
+                    calculation_log.append({
+                        'product_id': product_id,
+                        'action': 'updated_quantity',
+                        'old_quantity': old_quantity,
+                        'quantity_change': quantity_change,
+                        'new_quantity': new_quantity,
+                        'unit_price': float(unit_price),
+                        'old_total': float(unit_price * old_quantity),
+                        'new_total': existing_item.price
+                    })
+                else:
+                    calculation_log.append({
+                        'product_id': product_id,
+                        'action': 'no_change',
+                        'quantity': old_quantity,
+                        'note': 'No quantity change, skipping update'
+                    })
+
+            else:
+                if new_quantity > 0:
+                    # Add new item
+                    total_price_for_item = float(unit_price * new_quantity)
+                    new_item = OrderItem(
+                        order_id=order.id,
+                        product_id=product_id,
+                        quantity=new_quantity,
+                        price=total_price_for_item
+                    )
+                    db.session.add(new_item)
+                    
+                    calculation_log.append({
+                        'product_id': product_id,
+                        'action': 'added_new',
+                        'quantity': new_quantity,
+                        'unit_price': float(unit_price),
+                        'total_price': total_price_for_item
+                    })
+                else:
+                    # Trying to set quantity to 0 for non-existent item - ignore
+                    calculation_log.append({
+                        'product_id': product_id,
+                        'action': 'ignored',
+                        'note': 'Trying to remove non-existent item'
+                    })
+
+        # Recalculate total from all remaining items
+        all_items = OrderItem.query.filter_by(order_id=order.id).all()
+        order.total_amount = sum(Decimal(str(item.price)) for item in all_items)
+
+        # If no items left, delete the order
+        if len(all_items) == 0:
+            db.session.delete(order)
+            db.session.commit()
+            
+            return jsonify({
+                'message': 'Order deleted - no items remaining',
+                'order_id': None,
+                'total_amount': 0,
+                'items': [],
+                'debug_info': {
+                    'items_count': 0,
+                    'calculated_total': 0,
+                    'calculation_log': calculation_log,
+                    'sent_items': items
+                }
+            })
+
+        db.session.commit()
+
+        # Prepare response with updated items
+        response_items = []
+        for item in all_items:
+            prod = Product.query.get(item.product_id)
+            response_items.append({
+                'product_id': item.product_id,
+                'product_name': prod.name if prod else "Unknown",
+                'quantity': item.quantity,
+                'unit_price': float(prod.price) if prod else 0.0,
+                'price': float(item.price),  # This is the total price for this item (quantity * unit_price)
+                'total_price_for_item': float(item.price)  # Keep both for compatibility
+            })
+
+        return jsonify({
+            'message': 'Order updated successfully',
+            'order_id': order.id,
+            'total_amount': float(order.total_amount),
+            'items': response_items,
+            'debug_info': {
+                'items_count': len(all_items),
+                'calculated_total': float(order.total_amount),
+                'calculation_log': calculation_log,
+                'sent_items': items
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Order creation error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+
+
+@app.route('/payment/confirm', methods=['POST'])
+@token_required
+def confirm_payment(current_user):
     data = request.json
-    print(f"Order data: {data}")
     
-    new_order = Orders(
-        user_id=current_user.id,
-        total_amount=data['total_amount'],
-        delivery_address=data['delivery_address']
-    )
+    if 'order_id' not in data:
+        return jsonify({'message': 'Order ID is required'}), 400
+        
+    order = Orders.query.get(data['order_id'])
     
-    db.session.add(new_order)
+    if not order:
+        return jsonify({'message': 'Order not found'}), 404
+        
+    # Security check - ensure user can only update their own orders
+    if order.user_id != current_user.id and current_user.role != 'Admin':
+        return jsonify({'message': 'Unauthorized to update this order'}), 403
+    
+    # Update the order status
+    order.status = 'paid'
     db.session.commit()
     
-    print(f"Created order with ID: {new_order.id} for user: {new_order.user_id}")
+    return jsonify({
+        'message': 'Payment confirmed successfully',
+        'order_id': order.id,
+        'status': order.status
+    })
+@app.route('/cart', methods=['GET'])
+@token_required
+def get_cart(current_user):
+    try:
+        order = Orders.query.filter_by(user_id=current_user.id, status='pending').first()
+        if not order:
+            return jsonify({
+                'message': 'Cart is empty',
+                'cart_items': [],
+                'total_amount': "0.00"
+            }), 200
+
+        items = []
+        for item in order.order_items:
+            items.append({
+                'product_id': item.product_id,
+                'quantity': item.quantity,
+                'price': item.price
+            })
+
+        return jsonify({
+            'message': 'Cart retrieved successfully',
+            'order_id': order.id,
+            'cart_items': items,
+            'total_amount': str(order.total_amount)
+        }), 200
+
+    except Exception as e:
+        print("Error retrieving cart:", str(e))
+        return jsonify({'error': 'Failed to fetch cart'}), 500
     
-    # Process order items
-    for item in data['items']:
-        order_item = OrderItem(
-            order_id=new_order.id,
-            product_id=item['product_id'],
-            quantity=item['quantity'],
-            price=item['price']
-        )
-        db.session.add(order_item)
-    
-    db.session.commit()
-    return jsonify({'message': 'Order created successfully!', 'order_id': new_order.id})
+
+
 
 
 @app.route('/orders', methods=['GET'])
@@ -220,6 +616,43 @@ def update_order_status(current_user, order_id):
     order.status = data['status']
     db.session.commit()
     return jsonify({'message': 'Order status updated successfully!'})
+
+@app.route('/orders/<int:order_id>/items', methods=['GET'])
+@token_required
+def get_user_order_items(current_user, order_id):
+    # Admin and Delivery can see any order
+    if current_user.role in ['Admin', 'Delivery']:
+        order = Orders.query.get(order_id)
+    else:
+        # Customers can only see their own orders
+        order = Orders.query.filter_by(id=order_id, user_id=current_user.id).first()
+
+    if not order:
+        return jsonify({'message': 'Order not found!'}), 404
+
+    order_items = OrderItem.query.filter_by(order_id=order_id).all()
+    items = []
+
+    for item in order_items:
+        product = Product.query.get(item.product_id)
+        if product:
+            items.append({
+                'product_id': product.id,
+                'product_name': product.name,
+                'product_image': product.image_url,
+                'quantity': item.quantity,
+                'price': float(item.price),
+                'total_price': float(item.quantity * item.price)
+            })
+
+    return jsonify({
+        'order_id': order_id,
+        'items': items,
+        'total_amount': float(order.total_amount),
+        'status': order.status,
+        'delivery_address': order.delivery_address,
+        'user_id': order.user_id
+    })
 
 @app.route('/admin/orders/<int:order_id>/items', methods=['GET'])
 @token_required
@@ -390,61 +823,91 @@ def update_delivery_status(current_user, order_id):
         'new_status': order.status
     })
 
-
 @app.route('/payment', methods=['POST'])
 @token_required
 def make_payment(current_user):
     """
-    Generate a UPI payment link for the order instead of processing the payment directly.
+    Generate a UPI payment link for the order based on the selected payment app.
     """
     try:
         data = request.json
-        
-        required_fields = ['amount', 'order_id', 'payment_method']
+        required_fields = ['order_id', 'payment_method']
         if not all(field in data for field in required_fields):
             return jsonify({
                 'message': 'Missing required payment information!',
                 'required_fields': required_fields
             }), 400
         
-        # Validate amount format
-        try:
-            amount = float(data['amount'])
-            if amount <= 0:
-                return jsonify({'message': 'Invalid payment amount!'}), 400
-        except ValueError:
-            return jsonify({'message': 'Invalid amount format!'}), 400
-        
         # Get the order
         order = Orders.query.get(data['order_id'])
         if not order:
             return jsonify({'message': 'Order not found!'}), 404
-
+        
         # Authorization
         if order.user_id != current_user.id and current_user.role != 'Admin':
             return jsonify({'message': 'Unauthorized to make payment for this order!'}), 403
         
-        # Validate payment amount
-        if abs(float(data['amount']) - float(order.total_amount)) > 0.01:
-            return jsonify({
-                'message': 'Payment amount does not match order total!',
-                'payment_amount': float(data['amount']),
-                'order_total': float(order.total_amount)
-            }), 400
+        # Make sure we use the order's amount
+        amount = float(order.total_amount)
         
         if data['payment_method'] == 'upi':
-            # UPI payment - generate UPI link
-            upi_link = (
-                f"upi://pay?pa={data['upi_details']['payee_vpa']}&pn={data['upi_details']['payee_name']}"
-                f"&mc=&tid={order.id}&tr={order.id}&tn=Order Payment&am={data['amount']}&cu=INR"
-            )
-            print(upi_link)
-
+            # Get UPI details
+            if 'upi_details' not in data:
+                return jsonify({'message': 'UPI details are required!'}), 400
+            
+            upi_details = data['upi_details']
+            app_name = data.get('app_name', '')
+            app_package = data.get('app_package', '')
+            
+            # Common UPI parameters
+            payee_vpa = upi_details['payee_vpa']
+            payee_name = upi_details['payee_name']
+            tid = f"tid_{order.id}"
+            tr = f"tr_{order.id}"
+            tn = "Order Payment"
+            
+            # Generate appropriate UPI link based on app
+            if app_name == "Google Pay":
+                upi_link = (
+                    f"intent://pay?pa={payee_vpa}&pn={payee_name}"
+                    f"&mc=&tid={tid}&tr={tr}&tn={tn}&am={amount}&cu=INR"
+                    f"#Intent;scheme=upi;package={app_package};end;"
+                )
+            else:
+                upi_link = (
+                    f"upi://pay?pa={payee_vpa}&pn={payee_name}"
+                    f"&mc=&tid={tid}&tr={tr}&tn={tn}&am={amount}&cu=INR"
+                )
+            
+            current_app.logger.info(f"Generated UPI link for {app_name}: {upi_link}")
+            
+            # ✅ Check for existing payment
+            existing_payment = Payment.query.filter_by(order_id=order.id).first()
+            if existing_payment:
+                existing_payment.amount = amount
+                existing_payment.payment_method = 'upi'
+                existing_payment.status = 'initiated'
+                existing_payment.updated_at = datetime.utcnow()
+                db.session.commit()
+                payment = existing_payment
+            else:
+                # Create new payment record
+                payment = Payment(
+                    user_id=current_user.id,
+                    order_id=order.id,
+                    amount=amount,
+                    payment_method='upi',
+                    status='initiated'
+                )
+                db.session.add(payment)
+                db.session.commit()
+            
             return jsonify({
-                'message': 'UPI payment link generated.',
+                'message': f'UPI payment link generated for {app_name}.',
                 'upi_link': upi_link,
                 'order_id': order.id,
-                'amount': data['amount']
+                'payment_id': payment.id,
+                'amount': amount
             })
         
         return jsonify({'message': 'Only UPI payment is supported for now.'}), 400
@@ -453,6 +916,7 @@ def make_payment(current_user):
         db.session.rollback()
         current_app.logger.error(f"UPI Payment generation error: {str(e)}")
         return jsonify({'message': f'Error processing payment: {str(e)}'}), 500
+
 
 
 with app.app_context():
