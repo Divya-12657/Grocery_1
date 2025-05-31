@@ -1,546 +1,210 @@
-// // //Start of the category
 
-// // import React, { useState, useEffect } from 'react';
-// // import {
-// //   View,
-// //   Text,
-// //   FlatList,
-// //   StyleSheet,
-// //   TouchableOpacity,
-// //   TextInput,
-// //   Modal,
-// //   Alert,
-// // } from 'react-native';
-// // import axios from 'axios';
-// // import AsyncStorage from '@react-native-async-storage/async-storage';
-// // import CONFIG from '../../../config';
-
-// // export default function ProductsScreen() {
-// //   const [products, setProducts] = useState([]);
-// //   const [categories, setCategories] = useState([]);
-// //   const [selectedCategory, setSelectedCategory] = useState('');
-// //   const [newProduct, setNewProduct] = useState({
-// //     name: '',
-// //     description: '',
-// //     price: '',
-// //     stock: '',
-// //     category: '',
-// //   });
-
-// //   // Category modal state
-// //   const [modalVisible, setModalVisible] = useState(false);
-// //   const [newCategoryName, setNewCategoryName] = useState('');
-
-// //   // Edit modal state
-// //   const [editModalVisible, setEditModalVisible] = useState(false);
-// //   const [editedProduct, setEditedProduct] = useState({ id: null, name: '', stock: '' });
-
-// //   useEffect(() => {
-// //     fetchProducts();
-// //     fetchCategories();
-// //   }, []);
-
-// //   const fetchProducts = async () => {
-// //     try {
-// //       const response = await axios.get(`${CONFIG.API_URL}/products`);
-// //       setProducts(response.data);
-// //     } catch (error) {
-// //       alert('Error fetching products');
-// //     }
-// //   };
-
-// //   const fetchCategories = async () => {
-// //     try {
-// //       const response = await axios.get(`${CONFIG.API_URL}/categories`);
-// //       setCategories(response.data);
-// //     } catch (error) {
-// //       alert('Error fetching categories');
-// //     }
-// //   };
-
-// //   const handleAddProduct = async () => {
-// //     try {
-// //       const token = await AsyncStorage.getItem('token');
-// //       await axios.post(
-// //         `${CONFIG.API_URL}/products`,
-// //         {
-// //           ...newProduct,
-// //           category: selectedCategory,
-// //           price: parseFloat(newProduct.price),
-// //           stock: parseInt(newProduct.stock),
-// //         },
-// //         {
-// //           headers: { Authorization: token },
-// //         }
-// //       );
-// //       setNewProduct({ name: '', description: '', price: '', stock: '', category: '' });
-// //       setSelectedCategory('');
-// //       fetchProducts();
-// //     } catch (error) {
-// //       console.log(error);
-// //       alert('Error adding product');
-// //     }
-// //   };
-
-// //   const handleAddCategory = async () => {
-// //     if (!newCategoryName.trim()) {
-// //       Alert.alert('Validation', 'Category name cannot be empty');
-// //       return;
-// //     }
-// //     try {
-// //       const token = await AsyncStorage.getItem('token');
-// //       await axios.post(
-// //         `${CONFIG.API_URL}/categories`,
-// //         { name: newCategoryName },
-// //         { headers: { Authorization: token } }
-// //       );
-// //       setNewCategoryName('');
-// //       setModalVisible(false);
-// //       fetchCategories();
-// //       Alert.alert('Success', 'Category added successfully!');
-// //     } catch (error) {
-// //       console.log(error);
-// //       Alert.alert('Error', 'Failed to add category');
-// //     }
-// //   };
-
-// //   const handleEditProduct = (product) => {
-// //     setEditedProduct({ id: product.id, name: product.name, stock: product.stock.toString() });
-// //     setEditModalVisible(true);
-// //   };
-
-// //   const handleUpdateProduct = async () => {
-// //     try {
-// //       const token = await AsyncStorage.getItem('token');
-// //       await axios.put(
-// //         `${CONFIG.API_URL}/products/${editedProduct.id}`,
-// //         {
-// //           name: editedProduct.name,
-// //           stock: parseInt(editedProduct.stock),
-// //         },
-// //         {
-// //           headers: { Authorization: token },
-// //         }
-// //       );
-// //       setEditModalVisible(false);
-// //       fetchProducts();
-// //       Alert.alert('Success', 'Product updated successfully!');
-// //     } catch (error) {
-// //       console.error(error);
-// //       Alert.alert('Error', 'Failed to update product');
-// //     }
-// //   };
-
-// //   return (
-// //     <View style={styles.container}>
-// //       <View style={styles.categoryHeader}>
-// //         <Text style={styles.sectionTitle}>Select Category:</Text>
-// //         <TouchableOpacity
-// //           style={styles.plusButton}
-// //           onPress={() => setModalVisible(true)}
-// //         >
-// //           <Text style={styles.plusText}>+</Text>
-// //         </TouchableOpacity>
-// //       </View>
-
-// //       <View style={styles.categoryContainer}>
-// //         {categories.map((cat) => (
-// //           <TouchableOpacity
-// //             key={cat.id}
-// //             style={[
-// //               styles.categoryButton,
-// //               selectedCategory === cat.name && styles.categoryButtonSelected,
-// //             ]}
-// //             onPress={() => {
-// //               setSelectedCategory(cat.name);
-// //               setNewProduct({ ...newProduct, category: cat.name });
-// //             }}
-// //           >
-// //             <Text style={{ color: selectedCategory === cat.name ? '#fff' : '#000' }}>
-// //               {cat.name}
-// //             </Text>
-// //           </TouchableOpacity>
-// //         ))}
-// //       </View>
-
-// //       {/* Add Category Modal */}
-// //       <Modal
-// //         visible={modalVisible}
-// //         animationType="slide"
-// //         transparent={true}
-// //         onRequestClose={() => setModalVisible(false)}
-// //       >
-// //         <View style={styles.modalOverlay}>
-// //           <View style={styles.modalContainer}>
-// //             <Text style={styles.modalTitle}>Add New Category</Text>
-// //             <TextInput
-// //               style={styles.input}
-// //               placeholder="Category Name"
-// //               value={newCategoryName}
-// //               onChangeText={setNewCategoryName}
-// //             />
-// //             <View style={styles.modalButtons}>
-// //               <TouchableOpacity
-// //                 style={[styles.addButton, { flex: 1, marginRight: 5 }]}
-// //                 onPress={handleAddCategory}
-// //               >
-// //                 <Text style={styles.buttonText}>Add</Text>
-// //               </TouchableOpacity>
-// //               <TouchableOpacity
-// //                 style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]}
-// //                 onPress={() => setModalVisible(false)}
-// //               >
-// //                 <Text style={styles.buttonText}>Cancel</Text>
-// //               </TouchableOpacity>
-// //             </View>
-// //           </View>
-// //         </View>
-// //       </Modal>
-
-// //       {/* Edit Product Modal */}
-// //       <Modal
-// //         visible={editModalVisible}
-// //         animationType="slide"
-// //         transparent={true}
-// //         onRequestClose={() => setEditModalVisible(false)}
-// //       >
-// //         <View style={styles.modalOverlay}>
-// //           <View style={styles.modalContainer}>
-// //             <Text style={styles.modalTitle}>Edit Product</Text>
-// //             <TextInput
-// //               style={styles.input}
-// //               placeholder="Name"
-// //               value={editedProduct.name}
-// //               onChangeText={(text) => setEditedProduct({ ...editedProduct, name: text })}
-// //             />
-// //             <TextInput
-// //               style={styles.input}
-// //               placeholder="Stock"
-// //               keyboardType="numeric"
-// //               value={editedProduct.stock}
-// //               onChangeText={(text) => setEditedProduct({ ...editedProduct, stock: text })}
-// //             />
-// //             <View style={styles.modalButtons}>
-// //               <TouchableOpacity
-// //                 style={[styles.addButton, { flex: 1, marginRight: 5 }]}
-// //                 onPress={handleUpdateProduct}
-// //               >
-// //                 <Text style={styles.buttonText}>Update</Text>
-// //               </TouchableOpacity>
-// //               <TouchableOpacity
-// //                 style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]}
-// //                 onPress={() => setEditModalVisible(false)}
-// //               >
-// //                 <Text style={styles.buttonText}>Cancel</Text>
-// //               </TouchableOpacity>
-// //             </View>
-// //           </View>
-// //         </View>
-// //       </Modal>
-
-// //       <View style={styles.addForm}>
-// //         <TextInput
-// //           style={styles.input}
-// //           placeholder="Name"
-// //           value={newProduct.name}
-// //           onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
-// //         />
-// //         <TextInput
-// //           style={styles.input}
-// //           placeholder="Description"
-// //           value={newProduct.description}
-// //           onChangeText={(text) => setNewProduct({ ...newProduct, description: text })}
-// //         />
-// //         <TextInput
-// //           style={styles.input}
-// //           placeholder="Price"
-// //           value={newProduct.price}
-// //           onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
-// //           keyboardType="numeric"
-// //         />
-// //         <TextInput
-// //           style={styles.input}
-// //           placeholder="Stock"
-// //           value={newProduct.stock}
-// //           onChangeText={(text) => setNewProduct({ ...newProduct, stock: text })}
-// //           keyboardType="numeric"
-// //         />
-// //         <TouchableOpacity style={styles.addButton} onPress={handleAddProduct}>
-// //           <Text style={styles.buttonText}>Add Product</Text>
-// //         </TouchableOpacity>
-// //       </View>
-
-// //       <FlatList
-// //         data={products}
-// //         keyExtractor={(item) => item.id.toString()}
-// //         renderItem={({ item }) => (
-// //           <View style={styles.productCard}>
-// //             <Text style={styles.productName}>{item.name}</Text>
-// //             <Text>Price: ${item.price}</Text>
-// //             <Text>Stock: {item.stock}</Text>
-// //             <Text>Category: {item.category}</Text>
-// //             <TouchableOpacity
-// //               style={[styles.addButton, { marginTop: 5 }]}
-// //               onPress={() => handleEditProduct(item)}
-// //             >
-// //               <Text style={styles.buttonText}>Edit</Text>
-// //             </TouchableOpacity>
-// //           </View>
-// //         )}
-// //       />
-// //     </View>
-// //   );
-// // }
-
-// // const styles = StyleSheet.create({
-// //   container: { flex: 1, padding: 10 },
-// //   categoryHeader: {
-// //     flexDirection: 'row',
-// //     justifyContent: 'space-between',
-// //     alignItems: 'center',
-// //     marginBottom: 5,
-// //   },
-// //   sectionTitle: { fontSize: 16, fontWeight: 'bold' },
-// //   plusButton: {
-// //     backgroundColor: '#4CAF50',
-// //     borderRadius: 20,
-// //     width: 30,
-// //     height: 30,
-// //     justifyContent: 'center',
-// //     alignItems: 'center',
-// //   },
-// //   plusText: { color: '#fff', fontSize: 22, fontWeight: 'bold', lineHeight: 24 },
-// //   categoryContainer: {
-// //     flexDirection: 'row',
-// //     flexWrap: 'wrap',
-// //     marginBottom: 10,
-// //   },
-// //   categoryButton: {
-// //     borderWidth: 1,
-// //     borderColor: '#ccc',
-// //     paddingVertical: 8,
-// //     paddingHorizontal: 12,
-// //     borderRadius: 20,
-// //     marginRight: 8,
-// //     marginBottom: 8,
-// //     backgroundColor: '#f0f0f0',
-// //   },
-// //   categoryButtonSelected: { backgroundColor: '#4CAF50' },
-// //   addForm: {
-// //     backgroundColor: '#fff',
-// //     padding: 10,
-// //     borderRadius: 5,
-// //     marginBottom: 10,
-// //   },
-// //   input: {
-// //     borderWidth: 1,
-// //     borderColor: '#ddd',
-// //     padding: 10,
-// //     marginBottom: 10,
-// //     borderRadius: 5,
-// //   },
-// //   addButton: {
-// //     backgroundColor: '#4CAF50',
-// //     padding: 15,
-// //     borderRadius: 5,
-// //     alignItems: 'center',
-// //   },
-// //   cancelButton: {
-// //     backgroundColor: '#888',
-// //     padding: 15,
-// //     borderRadius: 5,
-// //     alignItems: 'center',
-// //   },
-// //   buttonText: { color: '#fff', fontSize: 16 },
-// //   productCard: {
-// //     backgroundColor: '#fff',
-// //     padding: 10,
-// //     marginBottom: 10,
-// //     borderRadius: 5,
-// //   },
-// //   productName: { fontSize: 16, fontWeight: 'bold' },
-// //   modalOverlay: {
-// //     flex: 1,
-// //     backgroundColor: 'rgba(0,0,0,0.4)',
-// //     justifyContent: 'center',
-// //     padding: 20,
-// //   },
-// //   modalContainer: {
-// //     backgroundColor: '#fff',
-// //     borderRadius: 8,
-// //     padding: 20,
-// //   },
-// //   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
-// //   modalButtons: { flexDirection: 'row', justifyContent: 'space-between' },
-// // });
-
-
-// ///jhjhbjh
-
-// import React, { useState, useEffect } from 'react';
-// import {
-//   View,
-//   Text,
-//   FlatList,
-//   StyleSheet,
-//   TouchableOpacity,
-//   TextInput,
-//   Modal,
+// import React, { useState, useEffect, useCallback } from 'react';
+// import { 
+//   View, 
+//   Text, 
+//   FlatList, 
+//   TextInput, 
+//   TouchableOpacity, 
+//   Modal, 
+//   StyleSheet, 
 //   Alert,
+//   ActivityIndicator,
+//   RefreshControl 
 // } from 'react-native';
 // import axios from 'axios';
+// import { Ionicons } from '@expo/vector-icons';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
-// import CONFIG from '../../../config';
 
-// export default function ProductsScreen() {
-//   const [products, setProducts] = useState([]);
-//   const [categories, setCategories] = useState([]);
-//   const [selectedCategory, setSelectedCategory] = useState('');
-//   const [newProduct, setNewProduct] = useState({
-//     name: '',
-//     description: '',
-//     price: '',
-//     stock: '',
-//     category: '',
-//   });
+// const API_BASE_URL = 'http://localhost:5000';
 
-//   // Category modal state
+// interface Product {
+//   id: number;
+//   name: string;
+//   description: string;
+//   price: number;
+//   stock: number;
+//   category: string;
+//   category_id: number;
+//   image_url: string;
+// }
+
+// interface Category {
+//   id: number;
+//   name: string;
+// }
+
+// const ProductsScreen = () => {
+//   const [products, setProducts] = useState<Product[]>([]);
+//   const [categories, setCategories] = useState<Category[]>([]);
+//   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+//   const [loading, setLoading] = useState(false);
+//   const [refreshing, setRefreshing] = useState(false);
+  
+//   // Modal states
 //   const [modalVisible, setModalVisible] = useState(false);
-//   const [newCategoryName, setNewCategoryName] = useState('');
-
-//   // Edit modal state
 //   const [editModalVisible, setEditModalVisible] = useState(false);
-//   const [editedProduct, setEditedProduct] = useState({ 
-//     id: null, 
-//     name: '', 
-//     description: '',
-//     price: '',
-//     stock: '' 
-//   });
+//   const [newCategory, setNewCategory] = useState('');
+//   const [editedProduct, setEditedProduct] = useState<Product | null>(null);
+//   const [editedName, setEditedName] = useState('');
+//   const [editedStock, setEditedStock] = useState('');
+//   const [editedPrice, setEditedPrice] = useState('');
 
-//   useEffect(() => {
-//     fetchProducts();
-//     fetchCategories();
-//   }, []);
+//   // Get auth token with proper Bearer format
+//   const getAuthHeaders = async () => {
+//     const token = await AsyncStorage.getItem('token');
+//     if (!token) {
+//       throw new Error('No token found');
+//     }
+//     return { 
+//       Authorization: `${token}`,
+//       'Content-Type': 'application/json'
+//     };
+//   };
 
-//   const fetchProducts = async () => {
+//   // Fetch all products (when no category is selected)
+//   const fetchAllProducts = async () => {
 //     try {
-//       const response = await axios.get(`${CONFIG.API_URL}/products`);
+//       setLoading(true);
+//       const headers = await getAuthHeaders();
+//       const response = await axios.get(`${API_BASE_URL}/products`, { headers });
 //       setProducts(response.data);
 //     } catch (error) {
-//       alert('Error fetching products');
+//       console.error('Error fetching products:', error);
+//       if (error.response?.status === 401) {
+//         Alert.alert('Authentication Error', 'Please log in again');
+//       } else {
+//         Alert.alert('Error', 'Failed to fetch products');
+//       }
+//     } finally {
+//       setLoading(false);
 //     }
 //   };
 
+//   // Fetch products by category using the new API endpoint
+//   const fetchProductsByCategory = async (categoryId: number) => {
+//     try {
+//       setLoading(true);
+//       const headers = await getAuthHeaders();
+//       const response = await axios.get(`${API_BASE_URL}/products/category/${categoryId}`, { headers });
+      
+//       if (response.data.products) {
+//         setProducts(response.data.products);
+//       } else {
+//         setProducts([]);
+//       }
+//     } catch (error) {
+//       console.error('Error fetching products by category:', error);
+//       if (error.response?.status === 401) {
+//         Alert.alert('Authentication Error', 'Please log in again');
+//       } else {
+//         Alert.alert('Error', 'Failed to fetch products by category');
+//       }
+//       setProducts([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // Fetch categories
 //   const fetchCategories = async () => {
 //     try {
-//       const response = await axios.get(`${CONFIG.API_URL}/categories`);
+//       const headers = await getAuthHeaders();
+//       const response = await axios.get(`${API_BASE_URL}/categories`, { headers });
 //       setCategories(response.data);
 //     } catch (error) {
-//       alert('Error fetching categories');
-//     }
-//   };
-
-//   const handleAddProduct = async () => {
-//     try {
-//       const token = await AsyncStorage.getItem('token');
-      
-//       // Validate required fields
-//       if (!newProduct.name || !newProduct.price || !newProduct.stock) {
-//         Alert.alert('Validation Error', 'Name, price and stock are required');
-//         return;
+//       console.error('Error fetching categories:', error);
+//       if (error.response?.status === 401) {
+//         Alert.alert('Authentication Error', 'Please log in again');
+//       } else {
+//         Alert.alert('Error', 'Failed to fetch categories');
 //       }
-      
-//       await axios.post(
-//         `${CONFIG.API_URL}/products`,
-//         {
-//           ...newProduct,
-//           category: selectedCategory,
-//           price: parseFloat(newProduct.price),
-//           stock: parseInt(newProduct.stock),
-//         },
-//         {
-//           headers: { Authorization: token },
-//         }
-//       );
-//       setNewProduct({ name: '', description: '', price: '', stock: '', category: '' });
-//       setSelectedCategory('');
-//       fetchProducts();
-//       Alert.alert('Success', 'Product added successfully!');
-//     } catch (error) {
-//       console.log(error.response || error);
-//       alert('Error adding product: ' + (error.response?.data?.message || error.message));
 //     }
 //   };
 
-//   const handleAddCategory = async () => {
-//     if (!newCategoryName.trim()) {
-//       Alert.alert('Validation', 'Category name cannot be empty');
+//   // Create new category
+//   const createCategory = async () => {
+//     if (!newCategory.trim()) {
+//       Alert.alert('Error', 'Please enter a category name');
 //       return;
 //     }
+
 //     try {
-//       const token = await AsyncStorage.getItem('token');
-//       await axios.post(
-//         `${CONFIG.API_URL}/categories`,
-//         { name: newCategoryName },
-//         { headers: { Authorization: token } }
+//       const headers = await getAuthHeaders();
+//       await axios.post(`${API_BASE_URL}/categories`, 
+//         { name: newCategory.trim() }, 
+//         { headers }
 //       );
-//       setNewCategoryName('');
+      
+//       setNewCategory('');
 //       setModalVisible(false);
-//       fetchCategories();
-//       Alert.alert('Success', 'Category added successfully!');
+//       await fetchCategories();
+//       Alert.alert('Success', 'Category created successfully');
 //     } catch (error) {
-//       console.log(error.response || error);
-//       Alert.alert('Error', `Failed to add category: ${error.response?.data?.message || error.message}`);
+//       console.error('Error creating category:', error);
+//       if (error.response?.status === 401) {
+//         Alert.alert('Authentication Error', 'Please log in again');
+//       } else {
+//         Alert.alert('Error', 'Failed to create category');
+//       }
 //     }
 //   };
 
-//   const handleEditProduct = (product) => {
-//     setEditedProduct({ 
-//       id: product.id, 
-//       name: product.name,
-//       description: product.description || '',
-//       price: product.price.toString(),
-//       stock: product.stock.toString() 
-//     });
-//     setEditModalVisible(true);
-//   };
+//   // Update product
+//   const updateProduct = async () => {
+//     if (!editedName.trim() || !editedStock.trim()) {
+//       Alert.alert('Error', 'Please fill in all required fields');
+//       return;
+//     }
 
-//   const handleUpdateProduct = async () => {
+//     const stockNumber = parseInt(editedStock);
+//     if (isNaN(stockNumber) || stockNumber < 0) {
+//       Alert.alert('Error', 'Please enter a valid stock number');
+//       return;
+//     }
+
 //     try {
-//       const token = await AsyncStorage.getItem('token');
+//       const headers = await getAuthHeaders();
+//       const updateData: any = {
+//         name: editedName.trim(),
+//         stock: stockNumber,
+//       };
+
+//       // Include price if it was edited and is valid
+//       if (editedPrice.trim()) {
+//         const priceNumber = parseFloat(editedPrice);
+//         if (isNaN(priceNumber) || priceNumber < 0) {
+//           Alert.alert('Error', 'Please enter a valid price');
+//           return;
+//         }
+//         updateData.price = priceNumber;
+//       }
+
+//       await axios.put(`${API_BASE_URL}/products/${editedProduct?.id}`, updateData, { headers });
       
-//       if (!editedProduct.name) {
-//         Alert.alert('Validation Error', 'Product name is required');
-//         return;
+//       setEditModalVisible(false);
+//       resetEditModal();
+      
+//       // Refresh products based on current selection
+//       if (selectedCategory) {
+//         await fetchProductsByCategory(selectedCategory);
+//       } else {
+//         await fetchAllProducts();
 //       }
       
-//       console.log('Updating product:', editedProduct);
-      
-//       await axios.put(
-//         `${CONFIG.API_URL}/products/${editedProduct.id}`,
-//         {
-//           name: editedProduct.name,
-//           description: editedProduct.description,
-//           price: parseFloat(editedProduct.price),
-//           stock: parseInt(editedProduct.stock),
-//         },
-//         {
-//           headers: { Authorization: token },
-//         }
-//       );
-//       setEditModalVisible(false);
-//       fetchProducts();
-//       Alert.alert('Success', 'Product updated successfully!');
+//       Alert.alert('Success', 'Product updated successfully');
 //     } catch (error) {
-//       console.error('Update error:', error.response || error);
-//       Alert.alert('Error', `Failed to update product: ${error.response?.data?.message || error.message}`);
+//       console.error('Error updating product:', error);
+//       if (error.response?.status === 401) {
+//         Alert.alert('Authentication Error', 'Please log in again');
+//       } else {
+//         Alert.alert('Error', 'Failed to update product');
+//       }
 //     }
 //   };
-  
-//   const handleDeleteProduct = async (productId) => {
-//     console.log('Delete button pressed for product ID:', productId);
-    
+
+//   // Delete product
+//   const deleteProduct = async (productId: number) => {
 //     Alert.alert(
 //       'Confirm Delete',
 //       'Are you sure you want to delete this product?',
@@ -551,29 +215,24 @@
 //           style: 'destructive',
 //           onPress: async () => {
 //             try {
-//               console.log('Deleting product with ID:', productId);
-//               const token = await AsyncStorage.getItem('token');
+//               const headers = await getAuthHeaders();
+//               await axios.delete(`${API_BASE_URL}/products/${productId}`, { headers });
               
-//               if (!token) {
-//                 console.error('No authentication token found');
-//                 Alert.alert('Error', 'Authentication required');
-//                 return;
+//               // Refresh products
+//               if (selectedCategory) {
+//                 await fetchProductsByCategory(selectedCategory);
+//               } else {
+//                 await fetchAllProducts();
 //               }
               
-//               console.log('Sending delete request to:', `${CONFIG.API_URL}/products/${productId}`);
-//               const response = await axios.delete(
-//                 `${CONFIG.API_URL}/products/${productId}`,
-//                 {
-//                   headers: { Authorization: token },
-//                 }
-//               );
-              
-//               console.log('Delete response:', response.data);
-//               fetchProducts();
-//               Alert.alert('Success', 'Product deleted successfully!');
+//               Alert.alert('Success', 'Product deleted successfully');
 //             } catch (error) {
-//               console.error('Delete error:', error.response || error);
-//               Alert.alert('Error', `Failed to delete product: ${error.response?.data?.message || error.message}`);
+//               console.error('Error deleting product:', error);
+//               if (error.response?.status === 401) {
+//                 Alert.alert('Authentication Error', 'Please log in again');
+//               } else {
+//                 Alert.alert('Error', 'Failed to delete product');
+//               }
 //             }
 //           },
 //         },
@@ -581,66 +240,209 @@
 //     );
 //   };
 
-//   return (
-//     <View style={styles.container}>
-//       <View style={styles.categoryHeader}>
-//         <Text style={styles.sectionTitle}>Select Category:</Text>
-//         <TouchableOpacity
-//           style={styles.plusButton}
-//           onPress={() => setModalVisible(true)}
+//   // Handle category selection
+//   const handleCategorySelect = async (categoryId: number | null) => {
+//     setSelectedCategory(categoryId);
+    
+//     if (categoryId === null) {
+//       // Show all products
+//       await fetchAllProducts();
+//     } else {
+//       // Show products for selected category
+//       await fetchProductsByCategory(categoryId);
+//     }
+//   };
+
+//   // Open edit modal
+//   const openEditModal = (product: Product) => {
+//     setEditedProduct(product);
+//     setEditedName(product.name);
+//     setEditedStock(product.stock.toString());
+//     setEditedPrice(product.price.toString());
+//     setEditModalVisible(true);
+//   };
+
+//   // Reset edit modal
+//   const resetEditModal = () => {
+//     setEditedProduct(null);
+//     setEditedName('');
+//     setEditedStock('');
+//     setEditedPrice('');
+//   };
+
+//   const cancelEdit = () => {
+//     setEditModalVisible(false);
+//     resetEditModal();
+//   };
+
+//   // Refresh function for pull-to-refresh
+//   const onRefresh = useCallback(async () => {
+//     setRefreshing(true);
+//     try {
+//       await fetchCategories();
+//       if (selectedCategory) {
+//         await fetchProductsByCategory(selectedCategory);
+//       } else {
+//         await fetchAllProducts();
+//       }
+//     } catch (error) {
+//       console.error('Error refreshing data:', error);
+//     } finally {
+//       setRefreshing(false);
+//     }
+//   }, [selectedCategory]);
+
+//   // Initial load
+//   useEffect(() => {
+//     const initializeData = async () => {
+//       try {
+//         await fetchCategories();
+//         await fetchAllProducts();
+//       } catch (error) {
+//         console.error('Error initializing data:', error);
+//       }
+//     };
+    
+//     initializeData();
+//   }, []);
+
+//   // Render product item with enhanced actions
+//   const renderProduct = ({ item }: { item: Product }) => (
+//     <TouchableOpacity style={styles.productItem} onPress={() => openEditModal(item)}>
+//       <View style={styles.productHeader}>
+//         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+//         <TouchableOpacity 
+//           style={styles.deleteButton}
+//           onPress={() => deleteProduct(item.id)}
 //         >
-//           <Text style={styles.plusText}>+</Text>
+//           <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
 //         </TouchableOpacity>
 //       </View>
+//       <Text style={styles.productCategory}>{item.category}</Text>
+//       <Text style={styles.productPrice}>${item.price?.toFixed(2) || '0.00'}</Text>
+//       <Text style={[
+//         styles.productStock, 
+//         item.stock <= 5 ? styles.lowStock : styles.normalStock
+//       ]}>
+//         Stock: {item.stock}
+//       </Text>
+//     </TouchableOpacity>
+//   );
 
-//       <View style={styles.categoryContainer}>
-//         {categories.map((cat) => (
-//           <TouchableOpacity
-//             key={cat.id}
-//             style={[
-//               styles.categoryButton,
-//               selectedCategory === cat.name && styles.categoryButtonSelected,
-//             ]}
-//             onPress={() => {
-//               setSelectedCategory(cat.name);
-//               setNewProduct({ ...newProduct, category: cat.name });
-//             }}
-//           >
-//             <Text style={{ color: selectedCategory === cat.name ? '#fff' : '#000' }}>
-//               {cat.name}
-//             </Text>
-//           </TouchableOpacity>
-//         ))}
+//   // Render category button
+//   const renderCategoryButton = ({ item }: { item: Category }) => (
+//     <TouchableOpacity
+//       style={[
+//         styles.categoryButton, 
+//         selectedCategory === item.id && styles.selectedCategory
+//       ]}
+//       onPress={() => handleCategorySelect(item.id)}
+//     >
+//       <Text style={[
+//         styles.categoryText,
+//         selectedCategory === item.id && styles.selectedCategoryText
+//       ]}>
+//         {item.name}
+//       </Text>
+//     </TouchableOpacity>
+//   );
+
+//   return (
+//     <View style={styles.container}>
+//       {/* Sidebar with categories */}
+//       <View style={styles.sidebarContainer}>
+//         <TouchableOpacity
+//           style={[
+//             styles.categoryButton, 
+//             styles.allCategoriesButton,
+//             selectedCategory === null && styles.selectedCategory
+//           ]}
+//           onPress={() => handleCategorySelect(null)}
+//         >
+//           <Text style={[
+//             styles.categoryText,
+//             selectedCategory === null && styles.selectedCategoryText
+//           ]}>
+//             All
+//           </Text>
+//         </TouchableOpacity>
+        
+//         <FlatList
+//           data={categories}
+//           keyExtractor={(item) => item.id.toString()}
+//           renderItem={renderCategoryButton}
+//           showsVerticalScrollIndicator={false}
+//           ListFooterComponent={
+//             <TouchableOpacity
+//               style={styles.createButton}
+//               onPress={() => setModalVisible(true)}
+//             >
+//               <Ionicons name="add-circle" size={30} color="#00b894" />
+//             </TouchableOpacity>
+//           }
+//         />
 //       </View>
 
-//       {/* Add Category Modal */}
-//       <Modal
-//         visible={modalVisible}
-//         animationType="slide"
-//         transparent={true}
-//         onRequestClose={() => setModalVisible(false)}
-//       >
-//         <View style={styles.modalOverlay}>
+//       {/* Products list */}
+//       <View style={styles.productsContainer}>
+//         {loading ? (
+//           <View style={styles.loadingContainer}>
+//             <ActivityIndicator size="large" color="#00b894" />
+//             <Text style={styles.loadingText}>Loading products...</Text>
+//           </View>
+//         ) : (
+//           <FlatList
+//             data={products}
+//             keyExtractor={(item) => item.id.toString()}
+//             renderItem={renderProduct}
+//             numColumns={2}
+//             contentContainerStyle={styles.grid}
+//             refreshControl={
+//               <RefreshControl
+//                 refreshing={refreshing}
+//                 onRefresh={onRefresh}
+//                 colors={['#00b894']}
+//               />
+//             }
+//             ListEmptyComponent={
+//               <View style={styles.emptyContainer}>
+//                 <Ionicons name="cube-outline" size={64} color="#ccc" />
+//                 <Text style={styles.emptyText}>
+//                   {selectedCategory ? 'No products in this category' : 'No products available'}
+//                 </Text>
+//               </View>
+//             }
+//           />
+//         )}
+//       </View>
+
+//       {/* Create Category Modal */}
+//       <Modal visible={modalVisible} animationType="slide" transparent>
+//         <View style={styles.modalBackground}>
 //           <View style={styles.modalContainer}>
-//             <Text style={styles.modalTitle}>Add New Category</Text>
+//             <Text style={styles.modalTitle}>Create Category</Text>
 //             <TextInput
 //               style={styles.input}
-//               placeholder="Category Name"
-//               value={newCategoryName}
-//               onChangeText={setNewCategoryName}
+//               placeholder="Category name"
+//               value={newCategory}
+//               onChangeText={setNewCategory}
+//               autoFocus
 //             />
-//             <View style={styles.modalButtons}>
-//               <TouchableOpacity
-//                 style={[styles.addButton, { flex: 1, marginRight: 5 }]}
-//                 onPress={handleAddCategory}
+//             <View style={styles.buttonRow}>
+//               <TouchableOpacity 
+//                 style={[styles.modalButton, styles.cancelButton]} 
+//                 onPress={() => {
+//                   setModalVisible(false);
+//                   setNewCategory('');
+//                 }}
 //               >
-//                 <Text style={styles.buttonText}>Add</Text>
+//                 <Text style={styles.cancelButtonText}>Cancel</Text>
 //               </TouchableOpacity>
-//               <TouchableOpacity
-//                 style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]}
-//                 onPress={() => setModalVisible(false)}
+//               <TouchableOpacity 
+//                 style={[styles.modalButton, styles.saveButton]} 
+//                 onPress={createCategory}
 //               >
-//                 <Text style={styles.buttonText}>Cancel</Text>
+//                 <Text style={styles.saveButtonText}>Create</Text>
 //               </TouchableOpacity>
 //             </View>
 //           </View>
@@ -648,489 +450,777 @@
 //       </Modal>
 
 //       {/* Edit Product Modal */}
-//       <Modal
-//         visible={editModalVisible}
-//         animationType="slide"
-//         transparent={true}
-//         onRequestClose={() => setEditModalVisible(false)}
-//       >
-//         <View style={styles.modalOverlay}>
+//       <Modal visible={editModalVisible} animationType="slide" transparent>
+//         <View style={styles.modalBackground}>
 //           <View style={styles.modalContainer}>
 //             <Text style={styles.modalTitle}>Edit Product</Text>
-            
-//             <Text style={styles.fieldLabel}>Name:</Text>
 //             <TextInput
 //               style={styles.input}
-//               placeholder="Name"
-//               value={editedProduct.name}
-//               onChangeText={(text) => setEditedProduct({ ...editedProduct, name: text })}
+//               placeholder="Product name"
+//               value={editedName}
+//               onChangeText={setEditedName}
 //             />
-            
-//             <Text style={styles.fieldLabel}>Description:</Text>
-//             <TextInput
-//               style={styles.input}
-//               placeholder="Description"
-//               value={editedProduct.description}
-//               onChangeText={(text) => setEditedProduct({ ...editedProduct, description: text })}
-//             />
-            
-//             <Text style={styles.fieldLabel}>Price:</Text>
 //             <TextInput
 //               style={styles.input}
 //               placeholder="Price"
-//               keyboardType="numeric"
-//               value={editedProduct.price}
-//               onChangeText={(text) => setEditedProduct({ ...editedProduct, price: text })}
+//               keyboardType="decimal-pad"
+//               value={editedPrice}
+//               onChangeText={setEditedPrice}
 //             />
-            
-//             <Text style={styles.fieldLabel}>Stock:</Text>
 //             <TextInput
 //               style={styles.input}
 //               placeholder="Stock"
 //               keyboardType="numeric"
-//               value={editedProduct.stock}
-//               onChangeText={(text) => setEditedProduct({ ...editedProduct, stock: text })}
+//               value={editedStock}
+//               onChangeText={setEditedStock}
 //             />
-            
-//             <View style={styles.modalButtons}>
-//               <TouchableOpacity
-//                 style={[styles.addButton, { flex: 1, marginRight: 5 }]}
-//                 onPress={handleUpdateProduct}
+//             <View style={styles.buttonRow}>
+//               <TouchableOpacity 
+//                 style={[styles.modalButton, styles.cancelButton]} 
+//                 onPress={cancelEdit}
 //               >
-//                 <Text style={styles.buttonText}>Update</Text>
+//                 <Text style={styles.cancelButtonText}>Cancel</Text>
 //               </TouchableOpacity>
-//               <TouchableOpacity
-//                 style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]}
-//                 onPress={() => setEditModalVisible(false)}
+//               <TouchableOpacity 
+//                 style={[styles.modalButton, styles.saveButton]} 
+//                 onPress={updateProduct}
 //               >
-//                 <Text style={styles.buttonText}>Cancel</Text>
+//                 <Text style={styles.saveButtonText}>Save</Text>
 //               </TouchableOpacity>
 //             </View>
 //           </View>
 //         </View>
 //       </Modal>
-
-//       <Text style={styles.sectionTitle}>Add New Product</Text>
-//       <View style={styles.addForm}>
-//         <View style={styles.formRow}>
-//           <Text style={styles.fieldLabel}>Name:</Text>
-//           <TextInput
-//             style={styles.input}
-//             placeholder="Product Name"
-//             value={newProduct.name}
-//             onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
-//           />
-//         </View>
-        
-//         <View style={styles.formRow}>
-//           <Text style={styles.fieldLabel}>Description:</Text>
-//           <TextInput
-//             style={styles.input}
-//             placeholder="Product Description"
-//             value={newProduct.description}
-//             onChangeText={(text) => setNewProduct({ ...newProduct, description: text })}
-//           />
-//         </View>
-        
-//         <View style={styles.formRow}>
-//           <Text style={styles.fieldLabel}>Price:</Text>
-//           <TextInput
-//             style={styles.input}
-//             placeholder="Product Price"
-//             value={newProduct.price}
-//             onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
-//             keyboardType="numeric"
-//           />
-//         </View>
-        
-//         <View style={styles.formRow}>
-//           <Text style={styles.fieldLabel}>Stock:</Text>
-//           <TextInput
-//             style={styles.input}
-//             placeholder="Product Stock"
-//             value={newProduct.stock}
-//             onChangeText={(text) => setNewProduct({ ...newProduct, stock: text })}
-//             keyboardType="numeric"
-//           />
-//         </View>
-        
-//         <TouchableOpacity style={styles.addButton} onPress={handleAddProduct}>
-//           <Text style={styles.buttonText}>Add Product</Text>
-//         </TouchableOpacity>
-//       </View>
-
-//       <Text style={styles.sectionTitle}>Product List</Text>
-//       <FlatList
-//         data={products}
-//         keyExtractor={(item) => item.id.toString()}
-//         renderItem={({ item }) => (
-//           <View style={styles.productCard}>
-//             <Text style={styles.productName}>{item.name}</Text>
-//             <Text style={styles.productDetail}>Price: ${item.price}</Text>
-//             <Text style={styles.productDetail}>Stock: {item.stock}</Text>
-//             <Text style={styles.productDetail}>Category: {item.category}</Text>
-//             <View style={styles.productActions}>
-//               <TouchableOpacity
-//                 style={[styles.actionButton, styles.editButton]}
-//                 onPress={() => handleEditProduct(item)}
-//               >
-//                 <Text style={styles.buttonText}>Edit</Text>
-//               </TouchableOpacity>
-//               <TouchableOpacity
-//                 style={[styles.actionButton, styles.deleteButton]}
-//                 onPress={() => handleDeleteProduct(item.id)}
-//               >
-//                 <Text style={styles.buttonText}>Delete</Text>
-//               </TouchableOpacity>
-//             </View>
-//           </View>
-//         )}
-//       />
 //     </View>
 //   );
-// }
+// };
 
 // const styles = StyleSheet.create({
-//   container: { 
-//     flex: 1, 
-//     padding: 10 
-//   },
-//   categoryHeader: {
+//   container: {
+//     flex: 1,
 //     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     alignItems: 'center',
-//     marginBottom: 5,
+//     backgroundColor: '#f5f5f5',
 //   },
-//   sectionTitle: { 
-//     fontSize: 18, 
-//     fontWeight: 'bold',
-//     marginVertical: 10
+//   sidebarContainer: {
+//     width: 90,
+//     backgroundColor: '#fff',
+//     paddingVertical: 10,
+//     paddingHorizontal: 5,
+//     borderRightWidth: 1,
+//     borderRightColor: '#e0e0e0',
 //   },
-//   plusButton: {
-//     backgroundColor: '#4CAF50',
-//     borderRadius: 20,
-//     width: 30,
-//     height: 30,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   plusText: { 
-//     color: '#fff', 
-//     fontSize: 22, 
-//     fontWeight: 'bold', 
-//     lineHeight: 24 
-//   },
-//   categoryContainer: {
-//     flexDirection: 'row',
-//     flexWrap: 'wrap',
-//     marginBottom: 10,
+//   productsContainer: {
+//     flex: 1,
 //   },
 //   categoryButton: {
-//     borderWidth: 1,
-//     borderColor: '#ccc',
-//     paddingVertical: 8,
-//     paddingHorizontal: 12,
-//     borderRadius: 20,
-//     marginRight: 8,
-//     marginBottom: 8,
+//     width: 70,
+//     height: 70,
+//     borderRadius: 35,
 //     backgroundColor: '#f0f0f0',
+//     marginVertical: 8,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     padding: 5,
+//     alignSelf: 'center',
 //   },
-//   categoryButtonSelected: { 
-//     backgroundColor: '#4CAF50' 
+//   allCategoriesButton: {
+//     backgroundColor: '#e3f2fd',
 //   },
-//   addForm: {
-//     backgroundColor: '#fff',
+//   selectedCategory: {
+//     backgroundColor: '#00b894',
+//   },
+//   categoryText: {
+//     textAlign: 'center',
+//     fontSize: 11,
+//     color: '#333',
+//     fontWeight: '500',
+//   },
+//   selectedCategoryText: {
+//     color: '#fff',
+//     fontWeight: 'bold',
+//   },
+//   createButton: {
+//     marginTop: 20,
+//     alignSelf: 'center',
+//   },
+//   loadingContainer: {
+//     flex: 1,
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//   },
+//   loadingText: {
+//     marginTop: 10,
+//     fontSize: 16,
+//     color: '#666',
+//   },
+//   grid: {
+//     flexGrow: 1,
 //     padding: 10,
-//     borderRadius: 5,
-//     marginBottom: 15,
-//     borderWidth: 1,
-//     borderColor: '#ddd',
 //   },
-//   formRow: {
+//   productItem: {
+//     backgroundColor: '#fff',
+//     padding: 15,
+//     margin: 5,
+//     borderRadius: 12,
+//     flex: 1,
+//     elevation: 2,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 1 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 2,
+//   },
+//   productHeader: {
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'flex-start',
 //     marginBottom: 8,
 //   },
-//   fieldLabel: {
-//     fontSize: 14,
-//     fontWeight: '600',
-//     marginBottom: 4,
-//     color: '#333',
-//   },
-//   input: {
-//     borderWidth: 1,
-//     borderColor: '#ddd',
-//     padding: 10,
-//     marginBottom: 10,
-//     borderRadius: 5,
-//     backgroundColor: '#f9f9f9',
-//   },
-//   addButton: {
-//     backgroundColor: '#4CAF50',
-//     padding: 15,
-//     borderRadius: 5,
-//     alignItems: 'center',
-//   },
-//   cancelButton: {
-//     backgroundColor: '#888',
-//     padding: 15,
-//     borderRadius: 5,
-//     alignItems: 'center',
-//   },
-//   buttonText: { 
-//     color: '#fff', 
+//   productName: {
 //     fontSize: 16,
-//     fontWeight: '500'
-//   },
-//   productCard: {
-//     backgroundColor: '#fff',
-//     padding: 12,
-//     marginBottom: 10,
-//     borderRadius: 5,
-//     borderWidth: 1,
-//     borderColor: '#ddd',
-//     elevation: 1,
-//   },
-//   productName: { 
-//     fontSize: 18, 
 //     fontWeight: 'bold',
-//     marginBottom: 5
-//   },
-//   productDetail: {
-//     fontSize: 14,
-//     marginBottom: 3,
-//     color: '#333'
-//   },
-//   productActions: {
-//     flexDirection: 'row',
-//     justifyContent: 'flex-start',
-//     marginTop: 10,
-//   },
-//   actionButton: {
-//     padding: 8,
-//     borderRadius: 5,
-//     alignItems: 'center',
-//     marginRight: 10,
-//     minWidth: 80,
-//   },
-//   editButton: {
-//     backgroundColor: '#2196F3',
+//     flex: 1,
+//     marginRight: 8,
 //   },
 //   deleteButton: {
-//     backgroundColor: '#F44336',
+//     padding: 4,
 //   },
-//   modalOverlay: {
+//   productCategory: {
+//     fontSize: 12,
+//     color: '#888',
+//     marginBottom: 4,
+//   },
+//   productPrice: {
+//     fontSize: 16,
+//     fontWeight: 'bold',
+//     color: '#00b894',
+//     marginBottom: 4,
+//   },
+//   productStock: {
+//     fontSize: 14,
+//   },
+//   normalStock: {
+//     color: '#555',
+//   },
+//   lowStock: {
+//     color: '#ff6b6b',
+//     fontWeight: 'bold',
+//   },
+//   emptyContainer: {
 //     flex: 1,
-//     backgroundColor: 'rgba(0,0,0,0.4)',
 //     justifyContent: 'center',
-//     padding: 20,
+//     alignItems: 'center',
+//     paddingVertical: 60,
+//   },
+//   emptyText: {
+//     fontSize: 16,
+//     color: '#999',
+//     marginTop: 16,
+//     textAlign: 'center',
+//   },
+//   modalBackground: {
+//     flex: 1,
+//     backgroundColor: 'rgba(0,0,0,0.5)',
+//     justifyContent: 'center',
+//     alignItems: 'center',
 //   },
 //   modalContainer: {
 //     backgroundColor: '#fff',
+//     borderRadius: 15,
+//     padding: 25,
+//     width: '85%',
+//     maxWidth: 400,
+//   },
+//   modalTitle: {
+//     fontSize: 20,
+//     fontWeight: 'bold',
+//     marginBottom: 20,
+//     textAlign: 'center',
+//     color: '#333',
+//   },
+//   input: {
+//     width: '100%',
+//     borderWidth: 1,
+//     borderColor: '#ddd',
 //     borderRadius: 8,
-//     padding: 20,
-//     maxHeight: '80%',
-//   },
-//   modalTitle: { 
-//     fontSize: 20, 
-//     fontWeight: 'bold', 
+//     paddingHorizontal: 12,
+//     paddingVertical: 10,
 //     marginBottom: 15,
-//     textAlign: 'center'
+//     fontSize: 16,
+//     backgroundColor: '#f9f9f9',
 //   },
-//   modalButtons: { 
-//     flexDirection: 'row', 
+//   buttonRow: {
+//     flexDirection: 'row',
 //     justifyContent: 'space-between',
-//     marginTop: 10
+//     width: '100%',
+//     marginTop: 10,
+//   },
+//   modalButton: {
+//     flex: 1,
+//     paddingVertical: 12,
+//     borderRadius: 8,
+//     marginHorizontal: 5,
+//   },
+//   saveButton: {
+//     backgroundColor: '#00b894',
+//   },
+//   cancelButton: {
+//     backgroundColor: '#f0f0f0',
+//   },
+//   saveButtonText: {
+//     color: '#fff',
+//     fontSize: 16,
+//     fontWeight: 'bold',
+//     textAlign: 'center',
+//   },
+//   cancelButtonText: {
+//     color: '#666',
+//     fontSize: 16,
+//     fontWeight: 'bold',
+//     textAlign: 'center',
 //   },
 // });
 
+// export default ProductsScreen;
 
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Modal,
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  TextInput, 
+  TouchableOpacity, 
+  Modal, 
+  StyleSheet, 
   Alert,
+  ActivityIndicator,
+  RefreshControl 
 } from 'react-native';
 import axios from 'axios';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import CONFIG from '../../../config';
 
-export default function ProductsScreen() {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    description: '',
-    price: '',
-    stock: '',
-    category: '',
-  });
+const API_BASE_URL = 'http://localhost:5000';
 
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  category: string;
+  category_id: number;
+  image_url: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+const ProductsScreen = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Modal states
   const [modalVisible, setModalVisible] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editedProduct, setEditedProduct] = useState({ id: null, name: '', stock: '' });
+  const [addProductModalVisible, setAddProductModalVisible] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [editedProduct, setEditedProduct] = useState<Product | null>(null);
+  const [editedName, setEditedName] = useState('');
+  const [editedStock, setEditedStock] = useState('');
+  const [editedPrice, setEditedPrice] = useState('');
+  
+  // Add product states
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductDescription, setNewProductDescription] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductStock, setNewProductStock] = useState('');
+  const [newProductCategory, setNewProductCategory] = useState('');
 
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, []);
+  // Get auth token with proper Bearer format
+  const getAuthHeaders = async () => {
+    const token = await AsyncStorage.getItem('token');
+    if (!token) {
+      throw new Error('No token found');
+    }
+    return { 
+      Authorization: `${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
 
-  const fetchProducts = async () => {
+  // Fetch all products (when no category is selected)
+  const fetchAllProducts = async () => {
     try {
-      const response = await axios.get(`${CONFIG.API_URL}/products`);
+      setLoading(true);
+      const headers = await getAuthHeaders();
+      const response = await axios.get(`${API_BASE_URL}/products`, { headers });
       setProducts(response.data);
     } catch (error) {
-      alert('Error fetching products');
+      console.error('Error fetching products:', error);
+      if (error.response?.status === 401) {
+        Alert.alert('Authentication Error', 'Please log in again');
+      } else {
+        Alert.alert('Error', 'Failed to fetch products');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Fetch products by category using the new API endpoint
+  const fetchProductsByCategory = async (categoryId: number) => {
+    try {
+      setLoading(true);
+      const headers = await getAuthHeaders();
+      const response = await axios.get(`${API_BASE_URL}/products/category/${categoryId}`, { headers });
+      
+      if (response.data.products) {
+        setProducts(response.data.products);
+      } else {
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error('Error fetching products by category:', error);
+      if (error.response?.status === 401) {
+        Alert.alert('Authentication Error', 'Please log in again');
+      } else {
+        Alert.alert('Error', 'Failed to fetch products by category');
+      }
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch categories
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${CONFIG.API_URL}/categories`);
+      const headers = await getAuthHeaders();
+      const response = await axios.get(`${API_BASE_URL}/categories`, { headers });
       setCategories(response.data);
     } catch (error) {
-      alert('Error fetching categories');
+      console.error('Error fetching categories:', error);
+      if (error.response?.status === 401) {
+        Alert.alert('Authentication Error', 'Please log in again');
+      } else {
+        Alert.alert('Error', 'Failed to fetch categories');
+      }
     }
   };
 
-  const handleAddProduct = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.post(
-        `${CONFIG.API_URL}/products`,
-        {
-          ...newProduct,
-          category: selectedCategory,
-          price: parseFloat(newProduct.price),
-          stock: parseInt(newProduct.stock),
-        },
-        {
-          headers: { Authorization: token },
-        }
-      );
-      setNewProduct({ name: '', description: '', price: '', stock: '', category: '' });
-      setSelectedCategory('');
-      fetchProducts();
-    } catch (error) {
-      console.log(error);
-      alert('Error adding product');
-    }
-  };
-
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) {
-      Alert.alert('Validation', 'Category name cannot be empty');
+  // Create new category
+  const createCategory = async () => {
+    if (!newCategory.trim()) {
+      Alert.alert('Error', 'Please enter a category name');
       return;
     }
+
     try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.post(
-        `${CONFIG.API_URL}/categories`,
-        { name: newCategoryName },
-        { headers: { Authorization: token } }
+      const headers = await getAuthHeaders();
+      await axios.post(`${API_BASE_URL}/categories`, 
+        { name: newCategory.trim() }, 
+        { headers }
       );
-      setNewCategoryName('');
+      
+      setNewCategory('');
       setModalVisible(false);
-      fetchCategories();
-      Alert.alert('Success', 'Category added successfully!');
+      await fetchCategories();
+      Alert.alert('Success', 'Category created successfully');
     } catch (error) {
-      console.log(error);
-      Alert.alert('Error', 'Failed to add category');
+      console.error('Error creating category:', error);
+      if (error.response?.status === 401) {
+        Alert.alert('Authentication Error', 'Please log in again');
+      } else {
+        Alert.alert('Error', 'Failed to create category');
+      }
     }
   };
 
-  const handleEditProduct = (product) => {
-    setEditedProduct({ id: product.id, name: product.name, stock: product.stock.toString() });
+  // Add new product
+  const addProduct = async () => {
+    if (!newProductName.trim() || !newProductPrice.trim() || !newProductStock.trim() || !newProductCategory.trim()) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    const priceNumber = parseFloat(newProductPrice);
+    const stockNumber = parseInt(newProductStock);
+
+    if (isNaN(priceNumber) || priceNumber < 0) {
+      Alert.alert('Error', 'Please enter a valid price');
+      return;
+    }
+
+    if (isNaN(stockNumber) || stockNumber < 0) {
+      Alert.alert('Error', 'Please enter a valid stock number');
+      return;
+    }
+
+    try {
+      const headers = await getAuthHeaders();
+      const productData = {
+        name: newProductName.trim(),
+        description: newProductDescription.trim() || '',
+        price: priceNumber,
+        stock: stockNumber,
+        category: newProductCategory.trim(),
+        image_url: '' // Default empty image URL
+      };
+
+      await axios.post(`${API_BASE_URL}/products`, productData, { headers });
+      
+      // Reset form
+      resetAddProductModal();
+      setAddProductModalVisible(false);
+      
+      // Refresh data
+      await fetchCategories();
+      if (selectedCategory) {
+        await fetchProductsByCategory(selectedCategory);
+      } else {
+        await fetchAllProducts();
+      }
+      
+      Alert.alert('Success', 'Product added successfully');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      if (error.response?.status === 401) {
+        Alert.alert('Authentication Error', 'Please log in again');
+      } else if (error.response?.status === 403) {
+        Alert.alert('Permission Error', 'You need admin privileges to add products');
+      } else {
+        Alert.alert('Error', 'Failed to add product');
+      }
+    }
+  };
+
+  // Update product
+  const updateProduct = async () => {
+    if (!editedName.trim() || !editedStock.trim()) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    const stockNumber = parseInt(editedStock);
+    if (isNaN(stockNumber) || stockNumber < 0) {
+      Alert.alert('Error', 'Please enter a valid stock number');
+      return;
+    }
+
+    try {
+      const headers = await getAuthHeaders();
+      const updateData: any = {
+        name: editedName.trim(),
+        stock: stockNumber,
+      };
+
+      // Include price if it was edited and is valid
+      if (editedPrice.trim()) {
+        const priceNumber = parseFloat(editedPrice);
+        if (isNaN(priceNumber) || priceNumber < 0) {
+          Alert.alert('Error', 'Please enter a valid price');
+          return;
+        }
+        updateData.price = priceNumber;
+      }
+
+      await axios.put(`${API_BASE_URL}/products/${editedProduct?.id}`, updateData, { headers });
+      
+      setEditModalVisible(false);
+      resetEditModal();
+      
+      // Refresh products based on current selection
+      if (selectedCategory) {
+        await fetchProductsByCategory(selectedCategory);
+      } else {
+        await fetchAllProducts();
+      }
+      
+      Alert.alert('Success', 'Product updated successfully');
+    } catch (error) {
+      console.error('Error updating product:', error);
+      if (error.response?.status === 401) {
+        Alert.alert('Authentication Error', 'Please log in again');
+      } else {
+        Alert.alert('Error', 'Failed to update product');
+      }
+    }
+  };
+
+  // Delete product
+  const deleteProduct = async (productId: number) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this product?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const headers = await getAuthHeaders();
+              await axios.delete(`${API_BASE_URL}/products/${productId}`, { headers });
+              
+              // Refresh products
+              if (selectedCategory) {
+                await fetchProductsByCategory(selectedCategory);
+              } else {
+                await fetchAllProducts();
+              }
+              
+              Alert.alert('Success', 'Product deleted successfully');
+            } catch (error) {
+              console.error('Error deleting product:', error);
+              if (error.response?.status === 401) {
+                Alert.alert('Authentication Error', 'Please log in again');
+              } else {
+                Alert.alert('Error', 'Failed to delete product');
+              }
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Handle category selection
+  const handleCategorySelect = async (categoryId: number | null) => {
+    setSelectedCategory(categoryId);
+    
+    if (categoryId === null) {
+      // Show all products
+      await fetchAllProducts();
+    } else {
+      // Show products for selected category
+      await fetchProductsByCategory(categoryId);
+    }
+  };
+
+  // Open edit modal
+  const openEditModal = (product: Product) => {
+    setEditedProduct(product);
+    setEditedName(product.name);
+    setEditedStock(product.stock.toString());
+    setEditedPrice(product.price.toString());
     setEditModalVisible(true);
   };
 
-  const handleUpdateProduct = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.put(
-        `${CONFIG.API_URL}/products/${editedProduct.id}`,
-        {
-          name: editedProduct.name,
-          stock: parseInt(editedProduct.stock),
-        },
-        {
-          headers: { Authorization: token },
-        }
-      );
-      setEditModalVisible(false);
-      fetchProducts();
-      Alert.alert('Success', 'Product updated successfully!');
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to update product');
-    }
+  // Reset edit modal
+  const resetEditModal = () => {
+    setEditedProduct(null);
+    setEditedName('');
+    setEditedStock('');
+    setEditedPrice('');
   };
 
-  const handleDeleteProduct = async (productId) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.delete(`${CONFIG.API_URL}/products/${productId}`, {
-        headers: { Authorization: token },
-      });
-      fetchProducts();
-      Alert.alert('Deleted', 'Product deleted successfully!');
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Failed to delete product');
-    }
+  // Reset add product modal
+  const resetAddProductModal = () => {
+    setNewProductName('');
+    setNewProductDescription('');
+    setNewProductPrice('');
+    setNewProductStock('');
+    setNewProductCategory('');
   };
+
+  const cancelEdit = () => {
+    setEditModalVisible(false);
+    resetEditModal();
+  };
+
+  const cancelAddProduct = () => {
+    setAddProductModalVisible(false);
+    resetAddProductModal();
+  };
+
+  // Refresh function for pull-to-refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchCategories();
+      if (selectedCategory) {
+        await fetchProductsByCategory(selectedCategory);
+      } else {
+        await fetchAllProducts();
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedCategory]);
+
+  // Initial load
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        await fetchCategories();
+        await fetchAllProducts();
+      } catch (error) {
+        console.error('Error initializing data:', error);
+      }
+    };
+    
+    initializeData();
+  }, []);
+
+  // Render product item with enhanced actions
+  const renderProduct = ({ item }: { item: Product }) => (
+    <TouchableOpacity style={styles.productItem} onPress={() => openEditModal(item)}>
+      <View style={styles.productHeader}>
+        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={() => deleteProduct(item.id)}
+        >
+          <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.productCategory}>{item.category}</Text>
+      <Text style={styles.productPrice}>${item.price?.toFixed(2) || '0.00'}</Text>
+      <Text style={[
+        styles.productStock, 
+        item.stock <= 5 ? styles.lowStock : styles.normalStock
+      ]}>
+        Stock: {item.stock}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  // Render category button
+  const renderCategoryButton = ({ item }: { item: Category }) => (
+    <TouchableOpacity
+      style={[
+        styles.categoryButton, 
+        selectedCategory === item.id && styles.selectedCategory
+      ]}
+      onPress={() => handleCategorySelect(item.id)}
+    >
+      <Text style={[
+        styles.categoryText,
+        selectedCategory === item.id && styles.selectedCategoryText
+      ]}>
+        {item.name}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
-      <View style={styles.categoryHeader}>
-        <Text style={styles.sectionTitle}>Select Category:</Text>
-        <TouchableOpacity style={styles.plusButton} onPress={() => setModalVisible(true)}>
-          <Text style={styles.plusText}>+</Text>
+      {/* Sidebar with categories */}
+      <View style={styles.sidebarContainer}>
+        <TouchableOpacity
+          style={[
+            styles.categoryButton, 
+            styles.allCategoriesButton,
+            selectedCategory === null && styles.selectedCategory
+          ]}
+          onPress={() => handleCategorySelect(null)}
+        >
+          <Text style={[
+            styles.categoryText,
+            selectedCategory === null && styles.selectedCategoryText
+          ]}>
+            All
+          </Text>
         </TouchableOpacity>
+        
+        <FlatList
+          data={categories}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderCategoryButton}
+          showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={() => setModalVisible(true)}
+            >
+              <Ionicons name="add-circle" size={30} color="#00b894" />
+            </TouchableOpacity>
+          }
+        />
       </View>
 
-      <View style={styles.categoryContainer}>
-        {categories.map((cat) => (
+      {/* Products list */}
+      <View style={styles.productsContainer}>
+        <View style={styles.productsHeader}>
+          <Text style={styles.productsTitle}>
+            {selectedCategory 
+              ? categories.find(c => c.id === selectedCategory)?.name || 'Products'
+              : 'All Products'
+            }
+          </Text>
           <TouchableOpacity
-            key={cat.id}
-            style={[
-              styles.categoryButton,
-              selectedCategory === cat.name && styles.categoryButtonSelected,
-            ]}
-            onPress={() => {
-              setSelectedCategory(cat.name);
-              setNewProduct({ ...newProduct, category: cat.name });
-            }}
+            style={styles.addProductButton}
+            onPress={() => setAddProductModalVisible(true)}
           >
-            <Text style={{ color: selectedCategory === cat.name ? '#fff' : '#000' }}>
-              {cat.name}
-            </Text>
+            <Ionicons name="add" size={24} color="#fff" />
           </TouchableOpacity>
-        ))}
+        </View>
+        
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#00b894" />
+            <Text style={styles.loadingText}>Loading products...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={products}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderProduct}
+            numColumns={2}
+            contentContainerStyle={styles.grid}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#00b894']}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="cube-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyText}>
+                  {selectedCategory ? 'No products in this category' : 'No products available'}
+                </Text>
+              </View>
+            }
+          />
+        )}
       </View>
 
-      {/* Add Category Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+      {/* Create Category Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent={false}>
+        <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Add New Category</Text>
+            <Text style={styles.modalTitle}>Create Category</Text>
             <TextInput
               style={styles.input}
-              placeholder="Category Name"
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
+              placeholder="Category name"
+              value={newCategory}
+              onChangeText={setNewCategory}
+              autoFocus
             />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.addButton, { flex: 1, marginRight: 5 }]} onPress={handleAddCategory}>
-                <Text style={styles.buttonText}>Add</Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={() => {
+                  setModalVisible(false);
+                  setNewCategory('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]} onPress={() => setModalVisible(false)}>
-                <Text style={styles.buttonText}>Cancel</Text>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveButton]} 
+                onPress={createCategory}
+              >
+                <Text style={styles.saveButtonText}>Create</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1138,153 +1228,298 @@ export default function ProductsScreen() {
       </Modal>
 
       {/* Edit Product Modal */}
-      <Modal visible={editModalVisible} animationType="slide" transparent onRequestClose={() => setEditModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={editModalVisible} animationType="slide" transparent>
+        <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Edit Product</Text>
             <TextInput
               style={styles.input}
-              placeholder="Name"
-              value={editedProduct.name}
-              onChangeText={(text) => setEditedProduct({ ...editedProduct, name: text })}
+              placeholder="Product name"
+              value={editedName}
+              onChangeText={setEditedName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Price"
+              keyboardType="decimal-pad"
+              value={editedPrice}
+              onChangeText={setEditedPrice}
             />
             <TextInput
               style={styles.input}
               placeholder="Stock"
               keyboardType="numeric"
-              value={editedProduct.stock}
-              onChangeText={(text) => setEditedProduct({ ...editedProduct, stock: text })}
+              value={editedStock}
+              onChangeText={setEditedStock}
             />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.addButton, { flex: 1, marginRight: 5 }]} onPress={handleUpdateProduct}>
-                <Text style={styles.buttonText}>Update</Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={cancelEdit}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]} onPress={() => setEditModalVisible(false)}>
-                <Text style={styles.buttonText}>Cancel</Text>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveButton]} 
+                onPress={updateProduct}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Add Product Form */}
-      <View style={styles.addForm}>
-        <TextInput
-          style={styles.input}
-          placeholder="Name"
-          value={newProduct.name}
-          onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Description"
-          value={newProduct.description}
-          onChangeText={(text) => setNewProduct({ ...newProduct, description: text })}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Price"
-          value={newProduct.price}
-          onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
-          keyboardType="numeric"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Stock"
-          value={newProduct.stock}
-          onChangeText={(text) => setNewProduct({ ...newProduct, stock: text })}
-          keyboardType="numeric"
-        />
-        <TouchableOpacity style={styles.addButton} onPress={handleAddProduct}>
-          <Text style={styles.buttonText}>Add Product</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Product List */}
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.productCard}>
-            <Text style={styles.productName}>{item.name}</Text>
-            <Text>Price: ${item.price}</Text>
-            <Text>Stock: {item.stock}</Text>
-            <Text>Category: {item.category}</Text>
-
-            <View style={{ flexDirection: 'row', marginTop: 10 }}>
-              <TouchableOpacity
-                style={[styles.addButton, { flex: 1, marginRight: 5 }]}
-                onPress={() => handleEditProduct(item)}
+      {/* Add Product Modal */}
+      <Modal visible={addProductModalVisible} animationType="slide" transparent>
+        <View style={styles.modalBackground}>
+          <View style={[styles.modalContainer, styles.largeModalContainer]}>
+            <Text style={styles.modalTitle}>Add New Product</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Product name *"
+              value={newProductName}
+              onChangeText={setNewProductName}
+              autoFocus
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Description (optional)"
+              value={newProductDescription}
+              onChangeText={setNewProductDescription}
+              multiline
+              numberOfLines={2}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Price *"
+              keyboardType="decimal-pad"
+              value={newProductPrice}
+              onChangeText={setNewProductPrice}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Stock quantity *"
+              keyboardType="numeric"
+              value={newProductStock}
+              onChangeText={setNewProductStock}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Category name *"
+              value={newProductCategory}
+              onChangeText={setNewProductCategory}
+            />
+            <Text style={styles.helperText}>
+              Category will be created if it doesn't exist
+            </Text>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={cancelAddProduct}
               >
-                <Text style={styles.buttonText}>Edit</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]}
-                onPress={() =>
-                  Alert.alert(
-                    'Confirm Delete',
-                    'Are you sure you want to delete this product?',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: () => handleDeleteProduct(item.id) },
-                    ]
-                  )
-                }
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.saveButton]} 
+                onPress={addProduct}
               >
-                <Text style={styles.buttonText}>Delete</Text>
+                <Text style={styles.saveButtonText}>Add Product</Text>
               </TouchableOpacity>
             </View>
           </View>
-        )}
-      />
+        </View>
+      </Modal>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 10 },
-  categoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold' },
-  plusButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 20,
-    width: 30,
-    height: 30,
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#f5f5f5',
+  },
+  sidebarContainer: {
+    width: 90,
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+  },
+  productsContainer: {
+    flex: 1,
+  },
+  categoryButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#f0f0f0',
+    marginVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 5,
+    alignSelf: 'center',
+  },
+  allCategoriesButton: {
+    backgroundColor: '#e3f2fd',
+  },
+  selectedCategory: {
+    backgroundColor: '#00b894',
+  },
+  categoryText: {
+    textAlign: 'center',
+    fontSize: 11,
+    color: '#333',
+    fontWeight: '500',
+  },
+  selectedCategoryText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  createButton: {
+    marginTop: 20,
+    alignSelf: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  plusText: { color: '#fff', fontSize: 22, fontWeight: 'bold', lineHeight: 24 },
-  categoryContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 },
-  categoryButton: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginRight: 8,
-    marginBottom: 8,
-    backgroundColor: '#f0f0f0',
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
-  categoryButtonSelected: { backgroundColor: '#4CAF50' },
-  addForm: { backgroundColor: '#fff', padding: 10, borderRadius: 5, marginBottom: 10 },
-  input: { borderWidth: 1, borderColor: '#ddd', padding: 10, marginBottom: 10, borderRadius: 5 },
-  addButton: { backgroundColor: '#4CAF50', padding: 12, borderRadius: 5 },
-  cancelButton: { backgroundColor: '#f44336', padding: 12, borderRadius: 5 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: 'bold' },
-  productCard: { backgroundColor: '#fff', padding: 15, borderRadius: 5, marginBottom: 10, elevation: 2 },
-  productName: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
-  modalOverlay: {
+  grid: {
+    flexGrow: 1,
+    padding: 10,
+  },
+  productItem: {
+    backgroundColor: '#fff',
+    padding: 15,
+    margin: 5,
+    borderRadius: 12,
+    flex: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  productHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 8,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  productCategory: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 4,
+  },
+  productPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#00b894',
+    marginBottom: 4,
+  },
+  productStock: {
+    fontSize: 14,
+  },
+  normalStock: {
+    color: '#555',
+  },
+  lowStock: {
+    color: '#ff6b6b',
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  modalBackground: {
+    flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContainer: {
     backgroundColor: '#fff',
-    borderRadius: 5,
-    padding: 20,
+    borderRadius: 15,
+    padding: 25,
+    width: '85%',
+    maxWidth: 400,
   },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  modalButtons: { flexDirection: 'row', marginTop: 10 },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
+  },
+  input: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 10,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+  },
+  saveButton: {
+    backgroundColor: '#00b894',
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
 });
+
+export default ProductsScreen;
+
+
+

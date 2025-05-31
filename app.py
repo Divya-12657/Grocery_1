@@ -147,6 +147,53 @@ def get_categories():
     categories = Category.query.all()
     return jsonify([{'id': c.id, 'name': c.name} for c in categories])
 
+#Get products based on Category 
+
+@app.route('/products/category/<int:category_id>', methods=['GET'])
+def get_products_by_category(category_id):
+    """
+    Get all products that belong to a specific category
+    """
+    try:
+        # Check if category exists
+        category = Category.query.get(category_id)
+        if not category:
+            return jsonify({'message': 'Category not found'}), 404
+        
+        # Get all products for this category
+        products = Product.query.filter_by(category_id=category_id).all()
+        
+        if not products:
+            return jsonify({
+                'message': f'No products found for category: {category.name}',
+                'category': {'id': category.id, 'name': category.name},
+                'products': []
+            }), 200
+        
+        # Format product data
+        products_data = []
+        for p in products:
+            products_data.append({
+                'id': p.id,
+                'name': p.name,
+                'description': p.description,
+                'price': p.price,
+                'stock': p.stock,
+                'category': p.category_obj.name,
+                'category_id': p.category_id,
+                'image_url': p.image_url
+            })
+        
+        return jsonify({
+            'message': f'Products found for category: {category.name}',
+            'category': {'id': category.id, 'name': category.name},
+            'products': products_data,
+            'total_products': len(products_data)
+        }), 200
+        
+    except Exception as e:
+        print(f"Error fetching products by category: {str(e)}")
+        return jsonify({'error': 'Failed to fetch products by category'}), 500
 
     
 # Product routes
@@ -222,110 +269,6 @@ def delete_product(current_user, product_id):
     db.session.commit()
 
     return jsonify({'message': 'Product deleted successfully'})
-
-
-
-
-
-# @app.route('/orders', methods=['POST'])
-# @token_required
-# def create_or_update_order(current_user):
-#     try:
-#         data = request.get_json()
-#         delivery_address = data.get('delivery_address')
-#         items = data.get('items')
-
-#         if not items or not isinstance(items, list):
-#             return jsonify({'error': 'No items provided'}), 400
-
-#         # Check for existing pending order
-#         order = Orders.query.filter_by(user_id=current_user.id, status='pending').first()
-
-#         if order:
-#             print(f"Updating existing order ID: {order.id}")
-
-#             if delivery_address:
-#                 order.delivery_address = delivery_address
-
-#             total_added = Decimal('0.00')
-
-#             for item in items:
-#                 product_id = item.get('product_id')
-#                 quantity = int(item.get('quantity', 1))
-#                 price = Decimal(str(item.get('price', 0)))
-
-#                 if not product_id or quantity <= 0 or price <= 0:
-#                     return jsonify({'error': 'Invalid item details'}), 400
-
-#                 existing_item = OrderItem.query.filter_by(order_id=order.id, product_id=product_id).first()
-#                 if existing_item:
-#                     existing_item.quantity += quantity
-#                     existing_item.price += float(price) * quantity  # Assuming `price` is per unit
-#                 else:
-#                     order_item = OrderItem(
-#                         order_id=order.id,
-#                         product_id=product_id,
-#                         quantity=quantity,
-#                         price=float(price) * quantity
-#                     )
-#                     db.session.add(order_item)
-
-#                 total_added += price * quantity
-
-#             order.total_amount = Decimal(str(order.total_amount)) + total_added
-#             db.session.commit()
-
-#             print(f"Updated total amount: {order.total_amount}")
-
-#             return jsonify({
-#                 'message': 'Items added to existing pending order',
-#                 'order_id': order.id,
-#                 'added_amount': str(total_added),
-#                 'total_amount': str(order.total_amount)
-#             }), 200
-
-#         else:
-#             # Create new order
-#             total_amount = Decimal('0.00')
-#             for item in items:
-#                 quantity = int(item.get('quantity', 1))
-#                 price = Decimal(str(item.get('price', 0)))
-#                 total_amount += price * quantity
-
-#             order = Orders(
-#                 user_id=current_user.id,
-#                 delivery_address=delivery_address,
-#                 total_amount=total_amount,
-#                 status='pending'
-#             )
-#             db.session.add(order)
-#             db.session.flush()  # Get order.id before committing
-
-#             for item in items:
-#                 quantity = int(item.get('quantity', 1))
-#                 price = Decimal(str(item.get('price', 0)))
-#                 order_item = OrderItem(
-#                     order_id=order.id,
-#                     product_id=item['product_id'],
-#                     quantity=quantity,
-#                     price=float(price) * quantity
-#                 )
-#                 db.session.add(order_item)
-
-#             db.session.commit()
-
-#             print(f"Created new order ID: {order.id} with total: {total_amount}")
-
-#             return jsonify({
-#                 'message': 'New order created',
-#                 'order_id': order.id,
-#                 'total_amount': str(total_amount)
-#             }), 201
-
-#     except Exception as e:
-#         db.session.rollback()
-#         print("Exception occurred:", str(e))
-#         return jsonify({'error': str(e)}), 500
 
 @app.route('/orders', methods=['POST'])
 @token_required
