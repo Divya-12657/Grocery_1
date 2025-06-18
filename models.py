@@ -102,21 +102,6 @@ class OrderItem(db.Model):
     quantity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)
 
-# class Payment(db.Model):
-#     __tablename__ = 'payment'
-#    # __table_args__ = {'schema': 'grocery_market'}
-
-#     id = db.Column(db.Integer, primary_key=True)
-#     # order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False, unique=True)
-#     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, unique=True)
-
-#     amount = db.Column(db.Float, nullable=False)
-#     status = db.Column(db.String(20), default='pending')  # pending, completed, failed
-#     payment_method = db.Column(db.String(50))
-#     transaction_id = db.Column(db.String(100))
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-#     # user_id = db.Column(db.Integer, db.ForeignKey('grocery_market.user.id'), nullable=False)
-#     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 class Payment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -126,25 +111,11 @@ class Payment(db.Model):
     payment_method = db.Column(db.String(50), nullable=False)
     transaction_id = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(20), default='initiated')  # initiated, completed, failed
+    razorpay_order_id = db.Column(db.String(100), nullable=True)     # ✅ New
+    razorpay_payment_id = db.Column(db.String(100), nullable=True)   # ✅ New (optional)
+    razorpay_signature = db.Column(db.String(255), nullable=True)  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
 
-# # Payment model for database
-# class Payment(db.Model):
-    
-#     __tablename__ = 'payment'
-#    # __table_args__ = {'schema': 'grocery_market'}
 
-#     id = db.Column(db.Integer, primary_key=True)
-#     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
-#     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-#     amount = db.Column(db.Float, nullable=False)
-#     payment_method = db.Column(db.String(50), nullable=False)
-#     transaction_id = db.Column(db.String(100), nullable=False)
-#     status = db.Column(db.String(20), nullable=False)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # # Relationships
-    # order = db.relationship('Orders', backref=db.backref('payments', lazy=True))
-    # user = db.relationship('User', backref=db.backref('payments', lazy=True))
