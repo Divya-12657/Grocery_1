@@ -15,9 +15,9 @@ import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://localhost:5000';
+// const API_BASE_URL = 'http://localhost:5000';
 // const API_BASE_URL = 'http://51.20.131.174:5000';
-// const API_BASE_URL = 'https://cartservices.shop';
+const API_BASE_URL = 'https://cartservices.shop';
 
 
 interface Product {

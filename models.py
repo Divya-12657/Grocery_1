@@ -38,49 +38,6 @@ class Product(db.Model):
     image_url = db.Column(db.String(200))
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
  
-# class Orders(db.Model):
-#     __tablename__ = 'orders'
-#    # __table_args__ = {'schema': 'grocery_market'}
-
-#     id = db.Column(db.Integer, primary_key=True)
-#     # user_id = db.Column(db.Integer, db.ForeignKey('grocery_market.user.id'), nullable=False)
-#     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
-#     status = db.Column(db.String(20), default='pending')  # pending, confirmed, delivered
-#     total_amount = db.Column(db.Float, nullable=False)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-#     delivery_address = db.Column(db.String(200), nullable=False)
-
-#     items = db.relationship('OrderItem', backref='orders', lazy=True)
-#     payment = db.relationship('Payment', backref='orders', uselist=False, lazy=True)  # One-to-One
-
-
-
-
-# Ensure Orders model has a status field
-# class Orders(db.Model):
-#     __tablename__ = 'orders'
-#     id = db.Column(db.Integer, primary_key=True)
-#     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-#     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
-#     delivery_address = db.Column(db.String(200), nullable=False)
-#     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-#     status = db.Column(db.String(20), default='pending')  # pending, paid, delivered, cancelled, etc.
-#     order_items = db.relationship('OrderItem', backref='order', lazy=True)
-#     payments = db.relationship('Payment', backref='order', lazy=True)
-
-# class OrderItem(db.Model):
-#     __tablename__ = 'order_item'
-#    # __table_args__ = {'schema': 'grocery_market'}
-
-#     id = db.Column(db.Integer, primary_key=True)
-#     order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
-#     # order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False)
-#     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
-#     # product_id = db.Column(db.Integer, db.ForeignKey('grocery_market.product.id'), nullable=False)
-#     quantity = db.Column(db.Integer, nullable=False)
-#     price = db.Column(db.Float, nullable=False)
-
 class Orders(db.Model):
     __tablename__ = 'orders'
 
@@ -116,6 +73,3 @@ class Payment(db.Model):
     razorpay_signature = db.Column(db.String(255), nullable=True)  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-
-

@@ -13,7 +13,8 @@ logging.basicConfig(level=logging.INFO)
 from dotenv import load_dotenv
 from decimal import Decimal
 from datetime import datetime
-
+import hmac
+import hashlib
 
 load_dotenv()
 
@@ -81,7 +82,8 @@ def register():
         email=data['email'],
         password=hashed_password,
         name=data['name'],
-        role=data.get('role', 'customer'),
+        # role=data.get('role', 'customer'),
+        role='Customer',
         address=data.get('address', ''),
         phone=data.get('phone', '')
     )
@@ -453,6 +455,33 @@ def create_or_update_order(current_user):
 
 
 
+# @app.route('/payment/confirm', methods=['POST'])
+# @token_required
+# def confirm_payment(current_user):
+#     data = request.json
+    
+#     if 'order_id' not in data:
+#         return jsonify({'message': 'Order ID is required'}), 400
+        
+#     order = Orders.query.get(data['order_id'])
+    
+#     if not order:
+#         return jsonify({'message': 'Order not found'}), 404
+        
+#     # Security check - ensure user can only update their own orders
+#     if order.user_id != current_user.id and current_user.role != 'Admin':
+#         return jsonify({'message': 'Unauthorized to update this order'}), 403
+    
+#     # Update the order status
+#     order.status = 'paid'
+#     db.session.commit()
+    
+#     return jsonify({
+#         'message': 'Payment confirmed successfully',
+#         'order_id': order.id,
+#         'status': order.status
+#     })
+
 @app.route('/payment/confirm', methods=['POST'])
 @token_required
 def confirm_payment(current_user):
@@ -466,12 +495,18 @@ def confirm_payment(current_user):
     if not order:
         return jsonify({'message': 'Order not found'}), 404
         
-    # Security check - ensure user can only update their own orders
     if order.user_id != current_user.id and current_user.role != 'Admin':
         return jsonify({'message': 'Unauthorized to update this order'}), 403
     
-    # Update the order status
+    # For UPI payments - simple confirmation
     order.status = 'paid'
+    
+    # Update payment record if exists
+    payment = Payment.query.filter_by(order_id=order.id).first()
+    if payment:
+        payment.status = 'confirmed'
+        payment.updated_at = datetime.utcnow()
+    
     db.session.commit()
     
     return jsonify({
@@ -479,6 +514,54 @@ def confirm_payment(current_user):
         'order_id': order.id,
         'status': order.status
     })
+
+
+@app.route('/payment/razorpay/confirm', methods=['POST'])
+@token_required
+def confirm_razorpay_payment(current_user):
+    data = request.json
+    print("🔔 Incoming Razorpay Confirmation Data:", data)
+
+    razorpay_order_id = data.get('razorpay_order_id')
+    razorpay_payment_id = data.get('payment_id')
+    razorpay_signature = data.get('signature')
+    order_id = data.get('order_id')
+
+    # Check for missing data
+    if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature, order_id]):
+        print("❌ Missing data:", {
+            "order_id": order_id,
+            "razorpay_order_id": razorpay_order_id,
+            "payment_id": razorpay_payment_id,
+            "signature": razorpay_signature
+        })
+        return jsonify({"message": "Missing data"}), 400
+
+    # Generate expected signature
+    import hmac, hashlib
+    expected_signature = hmac.new(
+        RAZORPAY_SECRET.encode(),
+        f"{razorpay_order_id}|{razorpay_payment_id}".encode(),
+        hashlib.sha256
+    ).hexdigest()
+
+    print("✅ Expected Signature:", expected_signature)
+    print("🧾 Provided Signature:", razorpay_signature)
+
+    if expected_signature != razorpay_signature:
+        print("❌ Signature mismatch")
+        return jsonify({"message": "Invalid signature"}), 400
+
+    order = Orders.query.get(order_id)
+    if not order:
+        return jsonify({"message": "Order not found"}), 404
+
+    order.status = 'paid'
+    db.session.commit()
+
+    return jsonify({"message": "Payment verified and order marked as paid."}), 200
+
+
 @app.route('/cart', methods=['GET'])
 @token_required
 def get_cart(current_user):
@@ -776,233 +859,6 @@ def update_delivery_status(current_user, order_id):
         'new_status': order.status
     })
 
-# @app.route('/payment', methods=['POST'])
-# @token_required
-# def make_payment(current_user):
-#     """
-#     Generate a UPI payment link for the order based on the selected payment app.
-#     """
-#     try:
-#         data = request.json
-#         required_fields = ['order_id', 'payment_method']
-#         if not all(field in data for field in required_fields):
-#             return jsonify({
-#                 'message': 'Missing required payment information!',
-#                 'required_fields': required_fields
-#             }), 400
-        
-#         # Get the order
-#         order = Orders.query.get(data['order_id'])
-#         if not order:
-#             return jsonify({'message': 'Order not found!'}), 404
-        
-#         # Authorization
-#         if order.user_id != current_user.id and current_user.role != 'Admin':
-#             return jsonify({'message': 'Unauthorized to make payment for this order!'}), 403
-        
-#         # Make sure we use the order's amount
-#         amount = float(order.total_amount)
-        
-#         if data['payment_method'] == 'upi':
-#             # Get UPI details
-#             if 'upi_details' not in data:
-#                 return jsonify({'message': 'UPI details are required!'}), 400
-            
-#             upi_details = data['upi_details']
-#             app_name = data.get('app_name', '')
-#             app_package = data.get('app_package', '')
-            
-#             # Common UPI parameters
-#             payee_vpa = upi_details['payee_vpa']
-#             payee_name = upi_details['payee_name']
-#             tid = f"tid_{order.id}"
-#             tr = f"tr_{order.id}"
-#             tn = "Order Payment"
-            
-#             # Generate appropriate UPI link based on app
-#             if app_name == "Google Pay":
-#                 upi_link = (
-#                     f"intent://pay?pa={payee_vpa}&pn={payee_name}"
-#                     f"&mc=&tid={tid}&tr={tr}&tn={tn}&am={amount}&cu=INR"
-#                     f"#Intent;scheme=upi;package={app_package};end;"
-#                 )
-#             else:
-#                 upi_link = (
-#                     f"upi://pay?pa={payee_vpa}&pn={payee_name}"
-#                     f"&mc=&tid={tid}&tr={tr}&tn={tn}&am={amount}&cu=INR"
-#                 )            
-               
-
-#             current_app.logger.info(f"Generated UPI link for {app_name}: {upi_link}")
-            
-#             # ✅ Check for existing payment
-#             existing_payment = Payment.query.filter_by(order_id=order.id).first()
-#             if existing_payment:
-#                 existing_payment.amount = amount
-#                 existing_payment.payment_method = 'upi'
-#                 existing_payment.status = 'initiated'
-#                 existing_payment.updated_at = datetime.utcnow()
-#                 db.session.commit()
-#                 payment = existing_payment
-#             else:
-#                 # Create new payment record
-#                 payment = Payment(
-#                     user_id=current_user.id,
-#                     order_id=order.id,
-#                     amount=amount,
-#                     payment_method='upi',
-#                     status='initiated'
-#                 )
-#                 db.session.add(payment)
-#                 db.session.commit()
-            
-#             return jsonify({
-#                 'message': f'UPI payment link generated for {app_name}.',
-#                 'upi_link': upi_link,
-#                 'order_id': order.id,
-#                 'payment_id': payment.id,
-#                 'amount': amount
-#             })
-        
-#         return jsonify({'message': 'Only UPI payment is supported for now.'}), 400
-    
-#     except Exception as e:
-#         db.session.rollback()
-#         current_app.logger.error(f"UPI Payment generation error: {str(e)}")
-#         return jsonify({'message': f'Error processing payment: {str(e)}'}), 500
-
-# @app.route('/payment', methods=['POST'])
-# @token_required
-# def make_payment(current_user):
-#     """
-#     Generate a UPI or Razorpay payment link for the order.
-#     """
-#     try:
-#         data = request.json
-#         required_fields = ['order_id', 'payment_method']
-#         if not all(field in data for field in required_fields):
-#             return jsonify({
-#                 'message': 'Missing required payment information!',
-#                 'required_fields': required_fields
-#             }), 400
-
-#         # Fetch the order
-#         order = Orders.query.get(data['order_id'])
-#         if not order:
-#             return jsonify({'message': 'Order not found!'}), 404
-
-#         # Authorization
-#         if order.user_id != current_user.id and current_user.role != 'Admin':
-#             return jsonify({'message': 'Unauthorized!'}), 403
-
-#         amount = float(order.total_amount)
-#         payment_method = data['payment_method']
-
-#         # ----------------------------------------
-#         # ✅ RAZORPAY PAYMENT FLOW
-#         # ----------------------------------------
-#         if payment_method == 'razorpay':
-#             razorpay_order = razor_client.order.create({
-#                 "amount": int(amount * 100),  # paise
-#                 "currency": "INR",
-#                 "receipt": f"order_rcptid_{order.id}",
-#                 "payment_capture": 1
-#             })
-
-#             # Optional: create/update Payment record
-#             payment = Payment.query.filter_by(order_id=order.id).first()
-#             if payment:
-#                 payment.amount = amount
-#                 payment.payment_method = 'razorpay'
-#                 payment.status = 'initiated'
-#                 payment.updated_at = datetime.utcnow()
-#             else:
-#                 payment = Payment(
-#                     user_id=current_user.id,
-#                     order_id=order.id,
-#                     amount=amount,
-#                     payment_method='razorpay',
-#                     status='initiated'
-#                 )
-#                 db.session.add(payment)
-#             db.session.commit()
-
-#             return jsonify({
-#                 'message': 'Razorpay order created.',
-#                 'razorpay_order_id': razorpay_order["id"],
-#                 'razorpay_key': RAZORPAY_KEY_ID,
-#                 'order_id': order.id,
-#                 'payment_id': payment.id,
-#                 'amount': int(amount * 100),  # paise
-#                 'currency': "INR"
-#             }), 200
-
-#         # ----------------------------------------
-#         # ✅ UPI INTENT LINK FLOW
-#         # ----------------------------------------
-#         elif payment_method == 'upi':
-#             if 'upi_details' not in data:
-#                 return jsonify({'message': 'UPI details are required!'}), 400
-
-#             upi_details = data['upi_details']
-#             app_name = data.get('app_name', '')
-#             app_package = data.get('app_package', '')
-
-#             payee_vpa = upi_details['payee_vpa']
-#             payee_name = upi_details['payee_name']
-#             tid = f"tid_{order.id}"
-#             tr = f"tr_{order.id}"
-#             tn = "Order Payment"
-
-#             if app_name == "Google Pay":
-#                 upi_link = (
-#                     f"intent://pay?pa={payee_vpa}&pn={payee_name}"
-#                     f"&mc=&tid={tid}&tr={tr}&tn={tn}&am={amount}&cu=INR"
-#                     f"#Intent;scheme=upi;package={app_package};end;"
-#                 )
-#             else:
-#                 upi_link = (
-#                     f"upi://pay?pa={payee_vpa}&pn={payee_name}"
-#                     f"&mc=&tid={tid}&tr={tr}&tn={tn}&am={amount}&cu=INR"
-#                 )
-
-#             current_app.logger.info(f"Generated UPI link for {app_name}: {upi_link}")
-
-#             existing_payment = Payment.query.filter_by(order_id=order.id).first()
-#             if existing_payment:
-#                 existing_payment.amount = amount
-#                 existing_payment.payment_method = 'upi'
-#                 existing_payment.status = 'initiated'
-#                 existing_payment.updated_at = datetime.utcnow()
-#                 db.session.commit()
-#                 payment = existing_payment
-#             else:
-#                 payment = Payment(
-#                     user_id=current_user.id,
-#                     order_id=order.id,
-#                     amount=amount,
-#                     payment_method='upi',
-#                     status='initiated'
-#                 )
-#                 db.session.add(payment)
-#                 db.session.commit()
-
-#             return jsonify({
-#                 'message': f'UPI payment link generated for {app_name}.',
-#                 'upi_link': upi_link,
-#                 'order_id': order.id,
-#                 'payment_id': payment.id,
-#                 'amount': amount
-#             }), 200
-
-#         return jsonify({'message': 'Unsupported payment method!'}), 400
-
-#     except Exception as e:
-#         db.session.rollback()
-#         current_app.logger.error(f"Payment error: {str(e)}")
-#         return jsonify({'message': f'Error processing payment: {str(e)}'}), 500
-
-
 @app.route('/payment', methods=['POST'])
 @token_required
 def make_payment(current_user):
@@ -1129,28 +985,39 @@ def make_payment(current_user):
         current_app.logger.error(f"Payment error: {str(e)}")
         return jsonify({'message': f'Error processing payment: {str(e)}'}), 500
 
-    
-
 
 @app.route('/payment/confirm', methods=['POST'])
 @token_required
 def confirm_payment_and_reduce_stock(current_user):
     data = request.get_json()
+
     order_id = data.get('order_id')
+    razorpay_order_id = data.get('razorpay_order_id')
+    payment_id = data.get('payment_id')  # Razorpay payment_id, not your DB id
+    signature = data.get('signature')
 
-    if not order_id:
-        return jsonify({'error': 'Order ID is required'}), 400
+    if not all([order_id, razorpay_order_id, payment_id, signature]):
+        return jsonify({'error': 'Missing required Razorpay confirmation fields'}), 400
 
-    # Check if user is valid
-    order = Order.query.filter_by(id=order_id, user_id=current_user.id).first()
+    order = Orders.query.filter_by(id=order_id, user_id=current_user.id).first()
     if not order:
         return jsonify({'error': 'Order not found'}), 404
 
     if order.status != 'pending':
-        return jsonify({'error': 'Order already confirmed or not in pending status'}), 400
+        return jsonify({'error': 'Order already confirmed or not pending'}), 400
+
+    # 🔐 Signature Verification
+    expected_signature = hmac.new(
+        RAZORPAY_SECRET.encode('utf-8'),
+        f"{razorpay_order_id}|{payment_id}".encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected_signature, signature):
+        return jsonify({'error': 'Invalid Razorpay signature'}), 400
 
     try:
-        order_items = OrderItem.query.filter_by(order_id=order_id).all()
+        order_items = OrderItem.query.filter_by(order_id=order.id).all()
 
         for item in order_items:
             product = Product.query.get(item.product_id)
@@ -1158,19 +1025,30 @@ def confirm_payment_and_reduce_stock(current_user):
                 return jsonify({'error': f'Product ID {item.product_id} not found'}), 404
 
             if product.stock < item.quantity:
-                return jsonify({'error': f'Not enough stock for {product.name}'}), 400
+                return jsonify({'error': f'Insufficient stock for {product.name}'}), 400
 
             product.stock -= item.quantity
+
+        # ✅ Store payment data
+        payment = Payment.query.filter_by(order_id=order.id).first()
+        if payment:
+            payment.razorpay_payment_id = payment_id
+            payment.razorpay_signature = signature
+            payment.status = 'confirmed'
+            payment.updated_at = datetime.utcnow()
 
         order.status = 'confirmed'
         db.session.commit()
 
-        return jsonify({'message': 'Payment confirmed. Stock updated.'}), 200
+        return jsonify({
+            'message': 'Payment verified. Order confirmed and stock updated.',
+            'order_id': order.id,
+            'status': order.status
+        }), 200
 
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
 
 
 with app.app_context():

@@ -68,13 +68,13 @@ const RegisterScreen = ({ navigation }) => {
         secureTextEntry
       />
 
-      <TextInput
+      {/* <TextInput
         style={styles.input}
         placeholder="role"
         value={role}
         onChangeText={setrole}
         secureTextEntry
-      />
+      /> */}
       
       <TextInput
         style={styles.input}
