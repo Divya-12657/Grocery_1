@@ -79,7 +79,7 @@ def register():
     data = request.json
     hashed_password = generate_password_hash(data['password'])
     new_user = User(
-        email=data['email'],
+        email=data['email'].strip().lower(),
         password=hashed_password,
         name=data['name'],
         # role=data.get('role', 'customer'),
@@ -99,7 +99,12 @@ def home():
 def login():
     print("LOGIN request received")
     data = request.json
-    user = User.query.filter_by(email=data['email']).first()
+     # ✅ Make email lowercase and trim whitespace
+    email = data['email'].strip().lower()
+
+    # ✅ Use lowercase email in query
+    user = User.query.filter_by(email=email).first()
+    # user = User.query.filter_by(email=data['email']).first()
     
     if user and check_password_hash(user.password, data['password']):
         token_payload = {'user_id': user.id}
@@ -193,7 +198,11 @@ def get_products_by_category(category_id):
                 'stock': p.stock,
                 'category': p.category_obj.name,
                 'category_id': p.category_id,
-                'image_url': p.image_url
+                # 'image_url': p.image_url
+                # 'image_url': f"{request.host_url}assets/images/{p.image_url}" if p.image_url else ""
+                'image_url': f"{request.host_url}store-images/{p.image_url}" if p.image_url else ""
+
+
             })
         
         return jsonify({
@@ -269,18 +278,36 @@ def update_product(current_user, product_id):
 
     return jsonify({'message': 'Product updated successfully'})
 
+
 @app.route('/products/<int:product_id>', methods=['DELETE'])
-@token_required  # if protected
+@token_required
 def delete_product(current_user, product_id):
-    product = Product.query.get(product_id)
+    try:
+        product = Product.query.get(product_id)
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
 
-    if not product:
-        return jsonify({'message': 'Product not found'}), 404
+        # Find related order items
+        order_items = OrderItem.query.filter_by(product_id=product_id).all()
 
-    db.session.delete(product)
-    db.session.commit()
+        # Check if any related order is NOT paid
+        for item in order_items:
+            if item.order.status.lower() != 'paid':
+                return jsonify({
+                    "error": "Cannot delete product. It is linked to unpaid orders."
+                }), 400
 
-    return jsonify({'message': 'Product deleted successfully'})
+        # All orders are paid, proceed to delete
+        db.session.delete(product)
+        db.session.commit()
+        return jsonify({"message": "Product deleted successfully"}), 200
+
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error", "details": str(e.orig)}), 500
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/orders', methods=['POST'])
 @token_required

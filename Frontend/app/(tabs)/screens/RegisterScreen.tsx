@@ -19,7 +19,7 @@ const RegisterScreen = ({ navigation }) => {
     setError(null);
 
     const data = {
-      email,
+      email:email.trim().toLowerCase(),
       password,
       name,
       role,

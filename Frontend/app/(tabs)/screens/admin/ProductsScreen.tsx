@@ -15,9 +15,9 @@ import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = 'http://localhost:5000';
 // const API_BASE_URL = 'http://51.20.131.174:5000';
-const API_BASE_URL = 'https://cartservices.shop';
+// const API_BASE_URL = 'https://cartservices.shop';
 
 
 interface Product {
@@ -58,7 +58,6 @@ const ProductsScreen = () => {
   const [newProductDescription, setNewProductDescription] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [newProductStock, setNewProductStock] = useState('');
-  const [newProductCategory, setNewProductCategory] = useState('');
 
   // Get auth token with proper Bearer format
   const getAuthHeaders = async () => {
@@ -162,8 +161,14 @@ const ProductsScreen = () => {
 
   // Add new product
   const addProduct = async () => {
-    if (!newProductName.trim() || !newProductPrice.trim() || !newProductStock.trim() || !newProductCategory.trim()) {
+    if (!newProductName.trim() || !newProductPrice.trim() || !newProductStock.trim()) {
       Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    // Check if a category is selected
+    if (!selectedCategory) {
+      Alert.alert('Error', 'Please select a category first');
       return;
     }
 
@@ -182,12 +187,14 @@ const ProductsScreen = () => {
 
     try {
       const headers = await getAuthHeaders();
+      const selectedCategoryName = categories.find(c => c.id === selectedCategory)?.name;
+      
       const productData = {
         name: newProductName.trim(),
         description: newProductDescription.trim() || '',
         price: priceNumber,
         stock: stockNumber,
-        category: newProductCategory.trim(),
+        category: selectedCategoryName,
         image_url: '' // Default empty image URL
       };
 
@@ -199,11 +206,7 @@ const ProductsScreen = () => {
       
       // Refresh data
       await fetchCategories();
-      if (selectedCategory) {
-        await fetchProductsByCategory(selectedCategory);
-      } else {
-        await fetchAllProducts();
-      }
+      await fetchProductsByCategory(selectedCategory);
       
       Alert.alert('Success', 'Product added successfully');
     } catch (error) {
@@ -271,42 +274,101 @@ const ProductsScreen = () => {
     }
   };
 
-  // Delete product
+  // // Delete product
+  // const deleteProduct = async (productId: number) => {
+  //   console.log('deleteProduct CALLED for ID:', productId);
+
+  //   Alert.alert(
+  //     'Confirm Delete',
+  //     'Are you sure you want to delete this product?',
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       {
+  //         text: 'Delete',
+  //         style: 'destructive',
+  //         onPress: async () => {
+  //           try {
+  //             const headers = await getAuthHeaders();
+  //             await axios.delete(`${API_BASE_URL}/products/${productId}`, { headers });
+              
+  //             // Refresh products
+  //             if (selectedCategory) {
+  //               await fetchProductsByCategory(selectedCategory);
+  //             } else {
+  //               await fetchAllProducts();
+  //             }
+              
+  //             Alert.alert('Success', 'Product deleted successfully');
+  //           } catch (error) {
+  //             console.error('Error deleting product:', error);
+  //             if (error.response?.status === 401) {
+  //               Alert.alert('Authentication Error', 'Please log in again');
+  //             } else {
+  //               Alert.alert('Error', 'Failed to delete product');
+  //             }
+  //           }
+  //         },
+  //       },
+  //     ]
+  //   );
+  // };
+
+  // const deleteProduct = async (productId: number) => {
+  //   console.log('deleteProduct CALLED for ID:', productId);
+  //   try {
+  //     const headers = await getAuthHeaders();
+  //     await axios.delete(`${API_BASE_URL}/products/${productId}`, { headers });
+  
+  //     // Refresh products
+  //     if (selectedCategory) {
+  //       await fetchProductsByCategory(selectedCategory);
+  //     } else {
+  //       await fetchAllProducts();
+  //     }
+  
+  //     Alert.alert('Success', 'Product deleted successfully');
+  //   } catch (error) {
+  //     if (error.response?.status === 400 && error.response.data.error?.includes('unpaid')) {
+  //       Alert.alert('Cannot Delete', 'Product is linked to unpaid orders and cannot be deleted.');
+  //     } else {
+  //       Alert.alert('Error', 'Failed to delete product');
+  //     }
+  //   }
+  // };
+  
   const deleteProduct = async (productId: number) => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this product?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const headers = await getAuthHeaders();
-              await axios.delete(`${API_BASE_URL}/products/${productId}`, { headers });
-              
-              // Refresh products
-              if (selectedCategory) {
-                await fetchProductsByCategory(selectedCategory);
-              } else {
-                await fetchAllProducts();
-              }
-              
-              Alert.alert('Success', 'Product deleted successfully');
-            } catch (error) {
-              console.error('Error deleting product:', error);
-              if (error.response?.status === 401) {
-                Alert.alert('Authentication Error', 'Please log in again');
-              } else {
-                Alert.alert('Error', 'Failed to delete product');
-              }
-            }
-          },
-        },
-      ]
-    );
+    console.log('deleteProduct CALLED for ID:', productId);
+    try {
+      const headers = await getAuthHeaders();
+      await axios.delete(`${API_BASE_URL}/products/${productId}`, { headers });
+  
+      // Refresh products
+      if (selectedCategory) {
+        await fetchProductsByCategory(selectedCategory);
+      } else {
+        await fetchAllProducts();
+      }
+  
+      Alert.alert('Success', 'Product deleted successfully');
+    } catch (error: any) {
+      console.error('Delete error:', error?.response?.data || error.message);
+  
+      if (
+        error.response?.status === 400 &&
+        error.response.data?.error?.toLowerCase().includes('unpaid')
+      ) {
+        Alert.alert(
+          'Cannot Delete Product',
+          'This product is linked to existing order items and cannot be deleted.'
+        );
+      } else {
+        Alert.alert('Error', 'Failed to delete product. Please try again.');
+      }
+    }
   };
+  
+  
+
 
   // Handle category selection
   const handleCategorySelect = async (categoryId: number | null) => {
@@ -344,7 +406,6 @@ const ProductsScreen = () => {
     setNewProductDescription('');
     setNewProductPrice('');
     setNewProductStock('');
-    setNewProductCategory('');
   };
 
   const cancelEdit = () => {
@@ -389,27 +450,59 @@ const ProductsScreen = () => {
   }, []);
 
   // Render product item with enhanced actions
+  // const renderProduct = ({ item }: { item: Product }) => (
+  //   <TouchableOpacity style={styles.productItem} onPress={() => openEditModal(item)}>
+  //     <View style={styles.productHeader}>
+  //       <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+  //       <TouchableOpacity 
+  //         style={styles.deleteButton}
+  //         onPress={() => deleteProduct(item.id)}
+  //       >
+  //         <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
+  //       </TouchableOpacity>
+  //     </View>
+  //     <Text style={styles.productCategory}>{item.category}</Text>
+  //     <Text style={styles.productPrice}>${item.price?.toFixed(2) || '0.00'}</Text>
+  //     <Text style={[
+  //       styles.productStock, 
+  //       item.stock <= 5 ? styles.lowStock : styles.normalStock
+  //     ]}>
+  //       Stock: {item.stock}
+  //     </Text>
+  //   </TouchableOpacity>
+  // );
+
   const renderProduct = ({ item }: { item: Product }) => (
-    <TouchableOpacity style={styles.productItem} onPress={() => openEditModal(item)}>
+    <View style={styles.productItem}>
       <View style={styles.productHeader}>
-        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditModal(item)}>
+          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        </TouchableOpacity>
+  
         <TouchableOpacity 
           style={styles.deleteButton}
-          onPress={() => deleteProduct(item.id)}
+          // style={[styles.deleteButton, { backgroundColor: 'red' }]}
+
+          onPress={() => {
+            console.log('Delete called for:', item.id); // Debug log
+            deleteProduct(item.id);
+          }}
         >
           <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
         </TouchableOpacity>
       </View>
+  
       <Text style={styles.productCategory}>{item.category}</Text>
       <Text style={styles.productPrice}>${item.price?.toFixed(2) || '0.00'}</Text>
       <Text style={[
-        styles.productStock, 
+        styles.productStock,
         item.stock <= 5 ? styles.lowStock : styles.normalStock
       ]}>
         Stock: {item.stock}
       </Text>
-    </TouchableOpacity>
+    </View>
   );
+  
 
   // Render category button
   const renderCategoryButton = ({ item }: { item: Category }) => (
@@ -475,10 +568,18 @@ const ProductsScreen = () => {
             }
           </Text>
           <TouchableOpacity
-            style={styles.addProductButton}
-            onPress={() => setAddProductModalVisible(true)}
+            style={[styles.addProductButton, !selectedCategory && styles.disabledButton]}
+            onPress={() => {
+              if (!selectedCategory) {
+                Alert.alert('Select Category', 'Please select a category first to add products');
+                return;
+              }
+              setAddProductModalVisible(true);
+            }}
+            disabled={!selectedCategory}
           >
             <Ionicons name="add" size={24} color="#fff" />
+            <Text style={styles.addProductButtonText}>Add Product</Text>
           </TouchableOpacity>
         </View>
         
@@ -594,6 +695,9 @@ const ProductsScreen = () => {
         <View style={styles.modalBackground}>
           <View style={[styles.modalContainer, styles.largeModalContainer]}>
             <Text style={styles.modalTitle}>Add New Product</Text>
+            <Text style={styles.categoryInfo}>
+              Category: {categories.find(c => c.id === selectedCategory)?.name || 'Unknown'}
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Product name *"
@@ -623,15 +727,6 @@ const ProductsScreen = () => {
               value={newProductStock}
               onChangeText={setNewProductStock}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Category name *"
-              value={newProductCategory}
-              onChangeText={setNewProductCategory}
-            />
-            <Text style={styles.helperText}>
-              Category will be created if it doesn't exist
-            </Text>
             <View style={styles.buttonRow}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelButton]} 
@@ -669,6 +764,60 @@ const styles = StyleSheet.create({
   },
   productsContainer: {
     flex: 1,
+  },
+  productsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  productsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  addProductButton: {
+    backgroundColor: '#00b894',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  addProductButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 6,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
+  categoryInfo: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#00b894',
+    textAlign: 'center',
+    marginBottom: 20,
+    padding: 10,
+    backgroundColor: '#f0f9f7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#00b894',
   },
   categoryButton: {
     width: 70,
@@ -788,6 +937,9 @@ const styles = StyleSheet.create({
     width: '85%',
     maxWidth: 400,
   },
+  largeModalContainer: {
+    maxHeight: '80%',
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -805,6 +957,12 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontSize: 16,
     backgroundColor: '#f9f9f9',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 15,
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -839,6 +997,3 @@ const styles = StyleSheet.create({
 });
 
 export default ProductsScreen;
-
-
-

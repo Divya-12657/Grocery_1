@@ -20,7 +20,7 @@ class User(db.Model):
     orders = db.relationship('Orders', backref='users', lazy=True)
 
 class Category(db.Model):
-    # __tablename__ = 'category'
+    __tablename__ = 'category'
     __table_args__ = {'schema': 'grocery_market'}
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
@@ -56,8 +56,22 @@ class Orders(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_on = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='pending')  # pending, paid, delivered, cancelled, etc.
-    order_items = db.relationship('OrderItem', backref='order', lazy=True)
+    # order_items = db.relationship('OrderItem', backref='order', lazy=True)
     payments = db.relationship('Payment', backref='order', lazy=True)
+
+# class OrderItem(db.Model):
+#     __tablename__ = 'order_item'
+#     __table_args__ = {'schema': 'grocery_market'}
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False)
+#     product_id = db.Column(db.Integer, db.ForeignKey('grocery_market.product.id'), nullable=False)
+#     quantity = db.Column(db.Integer, nullable=False)
+#     price = db.Column(db.Float, nullable=False)
+
+#     @property
+#     def total_price(self):
+#         return self.quantity * self.unit_price
 
 class OrderItem(db.Model):
     __tablename__ = 'order_item'
@@ -67,10 +81,17 @@ class OrderItem(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('grocery_market.product.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
-    price = db.Column(db.Float, nullable=False)
+    unit_price = db.Column(db.Float, nullable=False)  # 👈 Add this line
 
+    order = db.relationship('Orders', backref=db.backref('items', lazy=True))
+    product = db.relationship('Product', backref=db.backref('order_items', lazy=True))
+
+    @property
+    def total_price(self):
+        return self.quantity * self.unit_price
 
 class Payment(db.Model):
+    __tablename__ = 'payment'
     __table_args__ = {'schema': 'grocery_market'}
 
     id = db.Column(db.Integer, primary_key=True)
@@ -87,6 +108,7 @@ class Payment(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Branches(db.Model):
+    __table_name__ = 'Branches'
     __table_args__ = {'schema': 'grocery_market'}
 
     id = db.Column(db.Integer, primary_key=True)
