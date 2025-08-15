@@ -271,7 +271,7 @@ def update_product(current_user, product_id):
     # Update fields if present in request
     product.name = data.get('name', product.name)
     product.description = data.get('description', product.description)
-    product.price = data.get('price', product.price)
+    product.price = data.get('price', product.unit_price)
     product.stock = data.get('stock', product.stock)
 
     db.session.commit()
@@ -341,7 +341,7 @@ def create_or_update_order(current_user):
         for item in items:
             product_id = int(item['product_id'])
             new_quantity = int(item['quantity'])
-            sent_unit_price = Decimal(str(item['price'])) if item['price'] > 0 else Decimal('0')
+            sent_unit_price = Decimal(str(item['unit_price'])) if item['unit_price'] > 0 else Decimal('0')
 
             product = Product.query.get(product_id)
             if not product:
@@ -829,8 +829,8 @@ def get_delivery_order_items(current_user, order_id):
                 'product_name': product.name,
                 'product_image': product.image_url,
                 'quantity': item.quantity,
-                'price': float(item.price),
-                'total_price': float(item.quantity * item.price)
+                'price': float(item.unit_price),
+                'total_price': float(item.quantity * item.unit_price)
             })
 
     return jsonify({
