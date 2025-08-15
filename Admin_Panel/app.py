@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 app.secret_key = 'your_secret_key'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://divs:foodforthought@localhost/Grocery_Market'
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://divs:foodforthought@localhost/Grocery_Market"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -133,8 +133,8 @@ def admin_dashboard():
                 'product_name': item.product.name,
                 'category': item.product.category_obj.name if item.product.category_obj else 'Unknown',
                 'quantity': item.quantity,
-                'unit_price': item.unit_price,
-                'total_price': item.quantity * item.unit_price,
+                'unit_price': item.unit_price/item.quantity,
+                'total_price': item.unit_price,
                 'status': order.status,
                 'branch_id': getattr(order, 'branch_id', None)  # Safe attribute access
             })

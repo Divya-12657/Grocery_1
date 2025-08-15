@@ -67,7 +67,14 @@ class OrderItem(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey('grocery_market.orders.id'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('grocery_market.product.id'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
-    price = db.Column(db.Float, nullable=False)
+    unit_price = db.Column(db.Float, nullable=False)
+
+    # order = db.relationship('Orders', backref=db.backref('items', lazy=True))
+    product = db.relationship('Product', backref=db.backref('order_items', lazy=True))
+
+    @property
+    def total_price(self):
+        return self.quantity * self.unit_price
 
 
 class Payment(db.Model):

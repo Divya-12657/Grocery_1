@@ -405,7 +405,7 @@ def create_or_update_order(current_user):
                         order_id=order.id,
                         product_id=product_id,
                         quantity=new_quantity,
-                        price=total_price_for_item
+                        unit_price=total_price_for_item
                     )
                     db.session.add(new_item)
                     
@@ -426,7 +426,7 @@ def create_or_update_order(current_user):
 
         # Recalculate total from all remaining items
         all_items = OrderItem.query.filter_by(order_id=order.id).all()
-        order.total_amount = sum(Decimal(str(item.price)) for item in all_items)
+        order.total_amount = sum(Decimal(str(item.unit_price)) for item in all_items)
 
         # If no items left, delete the order
         if len(all_items) == 0:
@@ -456,9 +456,9 @@ def create_or_update_order(current_user):
                 'product_id': item.product_id,
                 'product_name': prod.name if prod else "Unknown",
                 'quantity': item.quantity,
-                'unit_price': float(prod.price) if prod else 0.0,
-                'price': float(item.price),  # This is the total price for this item (quantity * unit_price)
-                'total_price_for_item': float(item.price)  # Keep both for compatibility
+                'unit_price': float(prod.unit_price) if prod else 0.0,
+                'price': float(item.unit_price),  # This is the total price for this item (quantity * unit_price)
+                'total_price_for_item': float(item.unit_price)  # Keep both for compatibility
             })
 
         return jsonify({
@@ -704,8 +704,8 @@ def get_user_order_items(current_user, order_id):
                 'product_name': product.name,
                 'product_image': product.image_url,
                 'quantity': item.quantity,
-                'price': float(item.price),
-                'total_price': float(item.quantity * item.price)
+                'price': float(item.unit_price),
+                'total_price': float(item.quantity * item.unit_price)
             })
 
     return jsonify({
@@ -738,8 +738,8 @@ def get_order_items(current_user, order_id):
                 'product_name': product.name,
                 'product_image': product.image_url,
                 'quantity': item.quantity,
-                'price': float(item.price),
-                'total_price': float(item.quantity * item.price)
+                'price': float(item.unit_price),
+                'total_price': float(item.quantity * item.unit_price)
             })
 
     return jsonify({
