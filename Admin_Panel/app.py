@@ -15,8 +15,10 @@ app = Flask(__name__)
 
 
 app.secret_key = 'your_secret_key'
+# postgresql://divs:foodforthought@51.20.74.48/Grocery_Market
 
 app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://divs:foodforthought@localhost/Grocery_Market"
+# app.config['SQLALCHEMY_DATABASE_URI'] ='postgresql://divs:foodforthought@51.20.74.48/Grocery_Market'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 

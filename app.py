@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from decimal import Decimal
 from datetime import datetime
 import hmac
+import traceback
 import hashlib
 
 load_dotenv()
@@ -271,7 +272,7 @@ def update_product(current_user, product_id):
     # Update fields if present in request
     product.name = data.get('name', product.name)
     product.description = data.get('description', product.description)
-    product.price = data.get('price', product.unit_price)
+    product.price = data.get('price', product.price)
     product.stock = data.get('stock', product.stock)
 
     db.session.commit()
@@ -341,7 +342,7 @@ def create_or_update_order(current_user):
         for item in items:
             product_id = int(item['product_id'])
             new_quantity = int(item['quantity'])
-            sent_unit_price = Decimal(str(item['unit_price'])) if item['unit_price'] > 0 else Decimal('0')
+            sent_unit_price = Decimal(str(item['price'])) if item['price'] > 0 else Decimal('0')
 
             product = Product.query.get(product_id)
             if not product:
@@ -456,9 +457,9 @@ def create_or_update_order(current_user):
                 'product_id': item.product_id,
                 'product_name': prod.name if prod else "Unknown",
                 'quantity': item.quantity,
-                'unit_price': float(prod.unit_price) if prod else 0.0,
-                'price': float(item.unit_price),  # This is the total price for this item (quantity * unit_price)
-                'total_price_for_item': float(item.unit_price)  # Keep both for compatibility
+                'unit_price': float(prod.price) if prod else 0.0,
+                'price': float(item.price),  # This is the total price for this item (quantity * unit_price)
+                'total_price_for_item': float(item.price)  # Keep both for compatibility
             })
 
         return jsonify({
@@ -477,37 +478,9 @@ def create_or_update_order(current_user):
     except Exception as e:
         db.session.rollback()
         print(f"Order creation error: {str(e)}")
+        traceback.print_exc()  # This prints the full stack trace to the console
         return jsonify({'error': str(e)}), 500
 
-
-
-
-# @app.route('/payment/confirm', methods=['POST'])
-# @token_required
-# def confirm_payment(current_user):
-#     data = request.json
-    
-#     if 'order_id' not in data:
-#         return jsonify({'message': 'Order ID is required'}), 400
-        
-#     order = Orders.query.get(data['order_id'])
-    
-#     if not order:
-#         return jsonify({'message': 'Order not found'}), 404
-        
-#     # Security check - ensure user can only update their own orders
-#     if order.user_id != current_user.id and current_user.role != 'Admin':
-#         return jsonify({'message': 'Unauthorized to update this order'}), 403
-    
-#     # Update the order status
-#     order.status = 'paid'
-#     db.session.commit()
-    
-#     return jsonify({
-#         'message': 'Payment confirmed successfully',
-#         'order_id': order.id,
-#         'status': order.status
-#     })
 
 @app.route('/payment/confirm', methods=['POST'])
 @token_required
@@ -606,7 +579,7 @@ def get_cart(current_user):
             items.append({
                 'product_id': item.product_id,
                 'quantity': item.quantity,
-                'price': item.price
+                'price': item.unit_price
             })
 
         return jsonify({
