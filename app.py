@@ -125,6 +125,48 @@ def login():
     print("Invalid login attempt")
     return jsonify({'message': 'Invalid credentials!'}), 401
 
+
+#Edit Profile 
+
+@app.route('/user/profile', methods=['PUT'])
+@token_required
+def update_user_profile(current_user):
+    data = request.get_json()
+    user = User.query.get(current_user.id)
+    
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Update fields
+    user.name = data.get('name', user.name)
+    user.email = data.get('email', user.email)
+    user.phone = data.get('phone', user.phone)
+    user.address = data.get('address', user.address)
+    # user.city = data.get('city', 'Bangalore')
+    # user.pincode = data.get('pincode', '560085')
+    
+    db.session.commit()
+    
+    return jsonify({'message': 'Profile updated successfully'})
+
+@app.route('/user/profile', methods=['GET'])
+@token_required
+def get_user_profile(current_user):
+    user = User.query.get(current_user.id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    return jsonify({
+        'id': user.id,
+        'name': user.name,
+        'email': user.email,
+        'phone': user.phone,
+        'address': user.address,
+        # 'city': 'Bangalore',  # Add this field
+        # 'pincode': '560085',  # Add this field
+        'created_at': user.created_at.strftime('%Y-%m-%d'),
+    })
+
 # Adding category when you are the admin 
 
 @app.route('/categories', methods=['POST'])
@@ -309,12 +351,194 @@ def delete_product(current_user, product_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+    
+
+# @app.route('/orders', methods=['POST'])
+# @token_required
+# def create_or_update_order(current_user):
+#     try:
+#         data = request.get_json()
+#         delivery_address = data.get('delivery_address')
+#         items = data.get('items')
+
+#         if not items:
+#             return jsonify({'error': 'No items provided'}), 400
+
+#         order = Orders.query.filter_by(user_id=current_user.id, status='pending').first()
+
+#         if not order:
+#             order = Orders(
+#                 user_id=current_user.id,
+#                 delivery_address=delivery_address,
+#                 total_amount=Decimal('0.00'),
+#                 status='pending'
+#             )
+#             db.session.add(order)
+#             db.session.flush()
+#             print(f"Created new order with ID: {order.id}")
+#         elif delivery_address:
+#             order.delivery_address = delivery_address
+#             print(f"Using existing order ID: {order.id}")
+
+#         calculation_log = []
+
+#         for item in items:
+#             product_id = int(item['product_id'])
+#             new_quantity = int(item['quantity'])
+#             sent_unit_price = Decimal(str(item['price'])) if item['price'] > 0 else Decimal('0')
+
+#             product = Product.query.get(product_id)
+#             if not product:
+#                 return jsonify({'error': f'Product ID {product_id} not found'}), 404
+
+#             actual_unit_price = Decimal(str(product.price))
+
+#             # Only validate price if it was sent (not 0)
+#             if sent_unit_price > 0 and abs(sent_unit_price - actual_unit_price) > Decimal('0.01'):
+#                 print(f"WARNING: Price mismatch for product {product_id}")
+#                 print(f"Sent: {sent_unit_price}, Actual: {actual_unit_price}")
+
+#             unit_price = actual_unit_price
+#             existing_item = OrderItem.query.filter_by(order_id=order.id, product_id=product_id).first()
+
+#             if existing_item:
+#                 old_quantity = existing_item.quantity
+
+#                 if new_quantity == 0:
+#                     # Remove item completely
+#                     old_total = float(existing_item.unit_price)
+#                     db.session.delete(existing_item)
+#                     calculation_log.append({
+#                         'product_id': product_id,
+#                         'action': 'removed',
+#                         'old_quantity': old_quantity,
+#                         'new_quantity': 0,
+#                         'unit_price': float(unit_price),
+#                         'old_total': old_total,
+#                         'new_total': 0
+#                     })
+
+#                 elif new_quantity != old_quantity:
+#                     # Update quantity (can be increase or decrease)
+#                     quantity_change = new_quantity - old_quantity
+#                     old_total = float(existing_item.unit_price)
+#                     existing_item.quantity = new_quantity
+#                     # Fix: Store the total price in unit_price field (based on your original code structure)
+#                     existing_item.unit_price = float(unit_price * new_quantity)
+
+#                     calculation_log.append({
+#                         'product_id': product_id,
+#                         'action': 'updated_quantity',
+#                         'old_quantity': old_quantity,
+#                         'quantity_change': quantity_change,
+#                         'new_quantity': new_quantity,
+#                         'unit_price': float(unit_price),
+#                         'old_total': old_total,
+#                         'new_total': float(existing_item.unit_price)
+#                     })
+#                 else:
+#                     calculation_log.append({
+#                         'product_id': product_id,
+#                         'action': 'no_change',
+#                         'quantity': old_quantity,
+#                         'note': 'No quantity change, skipping update'
+#                     })
+
+#             else:
+#                 if new_quantity > 0:
+#                     # Add new item
+#                     total_price_for_item = float(unit_price * new_quantity)
+#                     new_item = OrderItem(
+#                         order_id=order.id,
+#                         product_id=product_id,
+#                         quantity=new_quantity,
+#                         unit_price=total_price_for_item  # Store total price in unit_price field
+#                     )
+#                     db.session.add(new_item)
+                    
+#                     calculation_log.append({
+#                         'product_id': product_id,
+#                         'action': 'added_new',
+#                         'quantity': new_quantity,
+#                         'unit_price': float(unit_price),
+#                         'total_price': total_price_for_item
+#                     })
+#                 else:
+#                     # Trying to set quantity to 0 for non-existent item - ignore
+#                     calculation_log.append({
+#                         'product_id': product_id,
+#                         'action': 'ignored',
+#                         'note': 'Trying to remove non-existent item'
+#                     })
+
+#         # Recalculate total from all remaining items
+#         all_items = OrderItem.query.filter_by(order_id=order.id).all()
+        
+#         # Calculate total using unit_price field (which stores total price for each item)
+#         order.total_amount = sum(Decimal(str(item.unit_price)) for item in all_items)
+
+#         # If no items left, delete the order
+#         if len(all_items) == 0:
+#             db.session.delete(order)
+#             db.session.commit()
+            
+#             return jsonify({
+#                 'message': 'Order deleted - no items remaining',
+#                 'order_id': None,
+#                 'total_amount': 0,
+#                 'items': [],
+#                 'debug_info': {
+#                     'items_count': 0,
+#                     'calculated_total': 0,
+#                     'calculation_log': calculation_log,
+#                     'sent_items': items
+#                 }
+#             })
+
+#         db.session.commit()
+
+#         # Prepare response with updated items
+#         response_items = []
+#         for item in all_items:
+#             prod = Product.query.get(item.product_id)
+#             # Calculate unit price from stored total and quantity
+#             calculated_unit_price = float(item.unit_price) / item.quantity if item.quantity > 0 else 0.0
+#             response_items.append({
+#                 'product_id': item.product_id,
+#                 'product_name': prod.name if prod else "Unknown",
+#                 'quantity': item.quantity,
+#                 'unit_price': float(prod.price) if prod else calculated_unit_price,  # Get actual unit price from Product
+#                 'price': float(item.unit_price),  # This is the total price for this item stored in unit_price field
+#                 'total_price_for_item': float(item.unit_price)  # Keep both for compatibility
+#             })
+
+#         return jsonify({
+#             'message': 'Order updated successfully',
+#             'order_id': order.id,
+#             'total_amount': float(order.total_amount),
+#             'items': response_items,
+#             'debug_info': {
+#                 'items_count': len(all_items),
+#                 'calculated_total': float(order.total_amount),
+#                 'calculation_log': calculation_log,
+#                 'sent_items': items
+#             }
+#         })
+
+#     except Exception as e:
+#         db.session.rollback()
+#         print(f"Order creation error: {str(e)}")
+#         traceback.print_exc()  # This prints the full stack trace to the console
+#         return jsonify({'error': str(e)}), 500
 
 @app.route('/orders', methods=['POST'])
 @token_required
 def create_or_update_order(current_user):
     try:
         data = request.get_json()
+        print(f"=== ORDER REQUEST START ===")
+        print(f"Request data: {data}")
+        
         delivery_address = data.get('delivery_address')
         items = data.get('items')
 
@@ -322,6 +546,7 @@ def create_or_update_order(current_user):
             return jsonify({'error': 'No items provided'}), 400
 
         order = Orders.query.filter_by(user_id=current_user.id, status='pending').first()
+        print(f"Existing pending order found: {order.id if order else 'None'}")
 
         if not order:
             order = Orders(
@@ -342,7 +567,9 @@ def create_or_update_order(current_user):
         for item in items:
             product_id = int(item['product_id'])
             new_quantity = int(item['quantity'])
-            sent_unit_price = Decimal(str(item['price'])) if item['price'] > 0 else Decimal('0')
+            sent_unit_price = Decimal(str(item['price'])) if item.get('price', 0) > 0 else Decimal('0')
+            
+            print(f"Processing item: Product ID {product_id}, Quantity {new_quantity}")
 
             product = Product.query.get(product_id)
             if not product:
@@ -357,28 +584,37 @@ def create_or_update_order(current_user):
 
             unit_price = actual_unit_price
             existing_item = OrderItem.query.filter_by(order_id=order.id, product_id=product_id).first()
+            print(f"Existing item found: {existing_item is not None}")
 
             if existing_item:
                 old_quantity = existing_item.quantity
 
-                if new_quantity == 0:
+                if new_quantity <= 0:  # Handle 0 or negative quantities
                     # Remove item completely
+                    old_total = float(existing_item.unit_price)
+                    print(f"🗑️ REMOVING item {product_id}: old_qty={old_quantity}, new_qty={new_quantity}")
+                    print(f"Item to be deleted - ID: {existing_item.id}")
                     db.session.delete(existing_item)
+                    print(f"✅ Item {product_id} marked for deletion")
                     calculation_log.append({
                         'product_id': product_id,
                         'action': 'removed',
                         'old_quantity': old_quantity,
-                        'new_quantity': 0,
+                        'new_quantity': new_quantity,
                         'unit_price': float(unit_price),
-                        'old_total': existing_item.price,
+                        'old_total': old_total,
                         'new_total': 0
                     })
 
                 elif new_quantity != old_quantity:
                     # Update quantity (can be increase or decrease)
                     quantity_change = new_quantity - old_quantity
+                    old_total = float(existing_item.unit_price)
                     existing_item.quantity = new_quantity
-                    existing_item.price = float(unit_price * new_quantity)
+                    # Fix: Store the total price in unit_price field (based on your original code structure)
+                    existing_item.unit_price = float(unit_price * new_quantity)
+                    print(f"🔄 UPDATING item {product_id}: {old_quantity} → {new_quantity} (change: {quantity_change:+d})")
+                    print(f"New total price: {existing_item.unit_price}")
 
                     calculation_log.append({
                         'product_id': product_id,
@@ -387,10 +623,11 @@ def create_or_update_order(current_user):
                         'quantity_change': quantity_change,
                         'new_quantity': new_quantity,
                         'unit_price': float(unit_price),
-                        'old_total': float(unit_price * old_quantity),
-                        'new_total': existing_item.price
+                        'old_total': old_total,
+                        'new_total': float(existing_item.unit_price)
                     })
                 else:
+                    print(f"⏭️ SKIPPING item {product_id}: no change needed (quantity: {old_quantity})")
                     calculation_log.append({
                         'product_id': product_id,
                         'action': 'no_change',
@@ -399,16 +636,18 @@ def create_or_update_order(current_user):
                     })
 
             else:
+                print(f"❌ No existing item found for product {product_id}")
                 if new_quantity > 0:
-                    # Add new item
+                    # Add new item only if quantity is positive
                     total_price_for_item = float(unit_price * new_quantity)
                     new_item = OrderItem(
                         order_id=order.id,
                         product_id=product_id,
                         quantity=new_quantity,
-                        unit_price=total_price_for_item
+                        unit_price=total_price_for_item  # Store total price in unit_price field
                     )
                     db.session.add(new_item)
+                    print(f"➕ ADDING new item {product_id}: qty={new_quantity}, total_price={total_price_for_item}")
                     
                     calculation_log.append({
                         'product_id': product_id,
@@ -418,19 +657,30 @@ def create_or_update_order(current_user):
                         'total_price': total_price_for_item
                     })
                 else:
-                    # Trying to set quantity to 0 for non-existent item - ignore
+                    # Trying to set quantity to 0 or negative for non-existent item - ignore but log
+                    print(f"⚠️ IGNORING request: product {product_id} doesn't exist, requested quantity: {new_quantity}")
                     calculation_log.append({
                         'product_id': product_id,
                         'action': 'ignored',
-                        'note': 'Trying to remove non-existent item'
+                        'note': f'Trying to set quantity to {new_quantity} for non-existent item',
+                        'requested_quantity': new_quantity
                     })
 
+        print(f"\n=== PROCESSING COMPLETE ===")
+        
         # Recalculate total from all remaining items
         all_items = OrderItem.query.filter_by(order_id=order.id).all()
+        print(f"Items remaining in order: {len(all_items)}")
+        for item in all_items:
+            print(f"  - Product {item.product_id}: qty={item.quantity}, stored_price={item.unit_price}")
+        
+        # Calculate total using unit_price field (which stores total price for each item)
         order.total_amount = sum(Decimal(str(item.unit_price)) for item in all_items)
+        print(f"Calculated order total: {order.total_amount}")
 
         # If no items left, delete the order
         if len(all_items) == 0:
+            print(f"🗑️ Order {order.id} has no items left - DELETING ORDER")
             db.session.delete(order)
             db.session.commit()
             
@@ -447,20 +697,27 @@ def create_or_update_order(current_user):
                 }
             })
 
+        print(f"💾 Committing changes to database...")
         db.session.commit()
+        print(f"✅ Database commit successful")
 
         # Prepare response with updated items
         response_items = []
         for item in all_items:
             prod = Product.query.get(item.product_id)
+            # Calculate unit price from stored total and quantity
+            calculated_unit_price = float(item.unit_price) / item.quantity if item.quantity > 0 else 0.0
             response_items.append({
                 'product_id': item.product_id,
                 'product_name': prod.name if prod else "Unknown",
                 'quantity': item.quantity,
-                'unit_price': float(prod.price) if prod else 0.0,
-                'price': float(item.price),  # This is the total price for this item (quantity * unit_price)
-                'total_price_for_item': float(item.price)  # Keep both for compatibility
+                'unit_price': float(prod.price) if prod else calculated_unit_price,  # Get actual unit price from Product
+                'price': float(item.unit_price),  # This is the total price for this item stored in unit_price field
+                'total_price_for_item': float(item.unit_price)  # Keep both for compatibility
             })
+
+        print(f"📤 Returning response with {len(response_items)} items")
+        print(f"=== ORDER REQUEST END ===\n")
 
         return jsonify({
             'message': 'Order updated successfully',
@@ -480,6 +737,7 @@ def create_or_update_order(current_user):
         print(f"Order creation error: {str(e)}")
         traceback.print_exc()  # This prints the full stack trace to the console
         return jsonify({'error': str(e)}), 500
+
 
 
 @app.route('/payment/confirm', methods=['POST'])

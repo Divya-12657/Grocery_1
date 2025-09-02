@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useEffect } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
@@ -14,8 +15,8 @@ export default function CartScreen({ route, navigation }) {
   const [pendingOrderItems, setPendingOrderItems] = useState([]);
   const [pendingOrderTotal, setPendingOrderTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [updatingItems, setUpdatingItems] = useState(new Set()); // Track items being updated
-  const [itemAddOrder, setItemAddOrder] = useState([]); // Track the order items were added
+  const [updatingItems, setUpdatingItems] = useState(new Set());
+  const [itemAddOrder, setItemAddOrder] = useState([]);
   const { token } = useContext(AuthContext);
 
   // Group products by ID for local cart
@@ -28,7 +29,7 @@ export default function CartScreen({ route, navigation }) {
         ...item, 
         quantity: 1,
         id: item.id,
-        unit_price: parseFloat(item.price) // Ensure it's a number
+        unit_price: parseFloat(item.price)
       };
     }
     return acc;
@@ -36,7 +37,7 @@ export default function CartScreen({ route, navigation }) {
 
   const cartItems = Object.values(groupedCart);
 
-  // Calculate local cart total - ALWAYS use unit_price * quantity
+  // Calculate local cart total
   const localTotal = cartItems.reduce((sum, item) => {
     const unitPrice = item.unit_price || parseFloat(item.price);
     const quantity = parseInt(item.quantity) || 1;
@@ -47,10 +48,8 @@ export default function CartScreen({ route, navigation }) {
     checkPendingOrder();
   }, []);
 
-  // Track the order of items as they're added from the cart
   useEffect(() => {
     if (cartItems.length > 0) {
-      // Update the add order with new items from cart, preserving existing order
       setItemAddOrder(prevOrder => {
         const existingIds = new Set(prevOrder);
         const newItems = cartItems
@@ -61,12 +60,11 @@ export default function CartScreen({ route, navigation }) {
     }
   }, [cartItems]);
 
-  // NEW: Auto-add items to existing order when cart changes
   useEffect(() => {
     if (pendingOrderId && cartItems.length > 0) {
       autoAddToExistingOrder();
     }
-  }, [cart, pendingOrderId]); // Trigger when cart or pendingOrderId changes
+  }, [cart, pendingOrderId]);
 
   const checkPendingOrder = async () => {
     try {
@@ -78,19 +76,17 @@ export default function CartScreen({ route, navigation }) {
       const pending = response.data.orders?.find(order => order.status === 'pending');
       if (pending) {
         setPendingOrderId(pending.id);
-        // Store the total from the order directly
         setPendingOrderTotal(parseFloat(pending.total_amount) || 0);
 
-        // Fetch pending order items for display
         try {
           const itemsResponse = await axios.get(`${CONFIG.API_URL}/orders/${pending.id}/items`, {
             headers: { Authorization: token }
           });
           
           const items = itemsResponse.data.items || [];
+          console.log('Fetched pending order items:', items);
           setPendingOrderItems(items);
           
-          // Update item add order with any new items from server that we haven't tracked yet
           setItemAddOrder(prevOrder => {
             const existingIds = new Set(prevOrder);
             const newServerItems = items
@@ -99,7 +95,6 @@ export default function CartScreen({ route, navigation }) {
             return [...prevOrder, ...newServerItems];
           });
           
-          // Double-check total calculation matches server
           const calculatedTotal = items.reduce((sum, item) => {
             return sum + (parseFloat(item.total_price_for_item) || parseFloat(item.price) || 0);
           }, 0);
@@ -108,7 +103,6 @@ export default function CartScreen({ route, navigation }) {
           console.log('Calculated total:', calculatedTotal);
           console.log('Pending order total from orders list:', pending.total_amount);
           
-          // Use server's total for consistency
           setPendingOrderTotal(parseFloat(itemsResponse.data.total_amount) || parseFloat(pending.total_amount) || 0);
           
         } catch (itemsError) {
@@ -116,10 +110,10 @@ export default function CartScreen({ route, navigation }) {
           setPendingOrderItems([]);
         }
       } else {
+        console.log('No pending order found');
         setPendingOrderId(null);
         setPendingOrderItems([]);
         setPendingOrderTotal(0);
-        // Clear the add order when no pending order exists
         setItemAddOrder([]);
       }
     } catch (error) {
@@ -133,18 +127,15 @@ export default function CartScreen({ route, navigation }) {
     }
   };
 
-  // NEW: Auto-add items to existing order
   const autoAddToExistingOrder = async () => {
     if (cartItems.length === 0) return;
 
-    // Prepare items payload - send unit price for server validation
     const itemsToSend = cartItems.map(item => ({
       product_id: parseInt(item.id),
       quantity: parseInt(item.quantity),
-      price: parseFloat(item.unit_price || item.price) // Send unit price
+      price: parseFloat(item.unit_price || item.price)
     }));
 
-    // Validate payload
     const invalidItems = itemsToSend.filter(item => 
       !item.product_id || item.quantity <= 0 || item.price <= 0 || isNaN(item.price)
     );
@@ -155,7 +146,7 @@ export default function CartScreen({ route, navigation }) {
     }
 
     const payload = {
-      delivery_address: address.trim() || 'Default Address', // Use existing address or default
+      delivery_address: address.trim() || 'Default Address',
       items: itemsToSend
     };
 
@@ -170,25 +161,24 @@ export default function CartScreen({ route, navigation }) {
       });
 
       console.log('Auto-add response:', response.data);
-
-      // Refresh the pending order items to show updated cart
       await checkPendingOrder();
 
     } catch (error) {
       console.error('Auto-add error:', error?.response?.data || error.message);
-      // Don't show alert for auto-add failures, just log them
     }
   };
 
-  // NEW: Function to update item quantity
   const updateItemQuantity = async (productId, newQuantity) => {
+    console.log(`🔧 updateItemQuantity called: Product ${productId}, New quantity: ${newQuantity}`);
+    
     if (!pendingOrderId) {
+      console.log(`❌ No pending order ID found`);
       Alert.alert('Error', 'No pending order found');
       return;
     }
 
-    // Add to updating set to show loading state - ensure productId is a string
     const productIdStr = productId.toString();
+    console.log(`🔄 Adding ${productIdStr} to updating items`);
     setUpdatingItems(prev => new Set(prev).add(productIdStr));
 
     try {
@@ -197,11 +187,11 @@ export default function CartScreen({ route, navigation }) {
         items: [{
           product_id: parseInt(productId),
           quantity: newQuantity,
-          price: 0 // Server will validate and use actual price
+          price: 0
         }]
       };
 
-      console.log('Updating quantity:', JSON.stringify(payload, null, 2));
+      console.log('📤 Sending payload:', JSON.stringify(payload, null, 2));
 
       const response = await axios.post(`${CONFIG.API_URL}/orders`, payload, {
         headers: { 
@@ -210,60 +200,70 @@ export default function CartScreen({ route, navigation }) {
         }
       });
 
-      console.log('Update quantity response:', response.data);
+      console.log('📥 Update quantity response:', JSON.stringify(response.data, null, 2));
 
-      // Refresh the pending order items to show updated quantities
-      await checkPendingOrder();
+      if (newQuantity <= 0) {
+        console.log(`🗑️ Item ${productId} removed, updating local state`);
+        setPendingOrderItems(prevItems => {
+          const filteredItems = prevItems.filter(item => item.product_id.toString() !== productIdStr);
+          console.log(`📊 Items after removal: ${filteredItems.length}`);
+          return filteredItems;
+        });
+        setItemAddOrder(prevOrder => {
+          const filteredOrder = prevOrder.filter(id => id !== productIdStr);
+          console.log(`📋 Order tracking after removal:`, filteredOrder);
+          return filteredOrder;
+        });
+        if (response.data.total_amount !== undefined) {
+          const newTotal = parseFloat(response.data.total_amount) || 0;
+          console.log(`💰 Updating total to: ${newTotal}`);
+          setPendingOrderTotal(newTotal);
+        }
+        if (response.data.items && response.data.items.length === 0) {
+          console.log(`🧹 No items left, clearing order`);
+          setPendingOrderId(null);
+          setPendingOrderItems([]);
+          setPendingOrderTotal(0);
+          setItemAddOrder([]);
+        }
+      } else {
+        console.log(`🔄 Refreshing order data after quantity update`);
+        await checkPendingOrder();
+      }
 
     } catch (error) {
-      console.error('Update quantity error:', error?.response?.data || error.message);
+      console.error('❌ Update quantity error:', error?.response?.data || error.message);
       const errorMessage = error?.response?.data?.message || 
                           error?.response?.data?.error || 
                           'Unable to update quantity. Please try again.';
       Alert.alert('Update Failed', errorMessage);
     } finally {
-      // Remove from updating set - ensure productId is a string
+      console.log(`✅ Removing ${productIdStr} from updating items`);
       setUpdatingItems(prev => {
         const newSet = new Set(prev);
         newSet.delete(productIdStr);
+        console.log(`🔄 Updating items remaining:`, Array.from(newSet));
         return newSet;
       });
     }
   };
 
-  // NEW: Function to remove item from order tracking when deleted
-  const removeItemFromOrder = (productId) => {
-    setItemAddOrder(prevOrder => 
-      prevOrder.filter(id => id !== productId.toString())
-    );
-  };
-
-  // NEW: Function to decrease quantity by 1
   const decreaseQuantity = async (productId, currentQuantity) => {
-    const newQuantity = currentQuantity - 1;
+    console.log(`🔽 Decrease quantity called: Product ${productId}, Current quantity: ${currentQuantity}`);
     
+    const newQuantity = currentQuantity - 1;
+    console.log(`New quantity will be: ${newQuantity}`);
+    
+    // Direct removal without confirmation dialog
     if (newQuantity <= 0) {
-      Alert.alert(
-        'Remove Item',
-        'This will remove the item from your order. Continue?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Remove', 
-            style: 'destructive',
-            onPress: async () => {
-              await updateItemQuantity(productId, 0);
-              removeItemFromOrder(productId);
-            }
-          }
-        ]
-      );
+      console.log(`🗑️ Item will be removed directly (no confirmation)`);
+      await updateItemQuantity(productId, 0);
     } else {
+      console.log(`📝 Updating quantity to ${newQuantity}`);
       await updateItemQuantity(productId, newQuantity);
     }
   };
 
-  // NEW: Function to increase quantity by 1
   const increaseQuantity = async (productId, currentQuantity) => {
     const newQuantity = currentQuantity + 1;
     await updateItemQuantity(productId, newQuantity);
@@ -274,7 +274,6 @@ export default function CartScreen({ route, navigation }) {
       return Alert.alert('Missing Address', 'Please enter a delivery address');
     }
 
-    // If we have a pending order, just navigate to payment
     if (pendingOrderId) {
       navigation.navigate('Payment', { 
         order_id: pendingOrderId,
@@ -283,19 +282,16 @@ export default function CartScreen({ route, navigation }) {
       return;
     }
 
-    // Otherwise, create new order (this case should be rare now)
     if (cartItems.length === 0) {
       return Alert.alert('Cart Empty', 'Please add items to cart before checkout.');
     }
 
-    // Prepare items payload - send unit price for server validation
     const itemsToSend = cartItems.map(item => ({
       product_id: parseInt(item.id),
       quantity: parseInt(item.quantity),
-      price: parseFloat(item.unit_price || item.price) // Send unit price
+      price: parseFloat(item.unit_price || item.price)
     }));
 
-    // Validate payload
     const invalidItems = itemsToSend.filter(item => 
       !item.product_id || item.quantity <= 0 || item.price <= 0 || isNaN(item.price)
     );
@@ -333,13 +329,11 @@ export default function CartScreen({ route, navigation }) {
         throw new Error('No order ID received from server');
       }
 
-      // Refresh pending order info after successful checkout
       await checkPendingOrder();
 
-      // Navigate to payment screen with the order ID and correct total
       navigation.navigate('Payment', { 
         order_id: orderId,
-        total_amount: serverTotal // Pass server total to payment screen
+        total_amount: serverTotal
       });
 
     } catch (error) {
@@ -360,28 +354,22 @@ export default function CartScreen({ route, navigation }) {
     );
   }
 
-  // Determine what to display
   const hasLocalItems = cartItems.length > 0;
   const hasPendingItems = pendingOrderItems.length > 0;
   
-  // Always show pending items if they exist, but sort them by add order
   let displayItems;
   if (hasPendingItems) {
-    // Sort pending items by the order they were added
     displayItems = [...pendingOrderItems].sort((a, b) => {
       const aIndex = itemAddOrder.indexOf(a.product_id.toString());
       const bIndex = itemAddOrder.indexOf(b.product_id.toString());
       
-      // If both items are in the order array, sort by their position
       if (aIndex !== -1 && bIndex !== -1) {
         return aIndex - bIndex;
       }
       
-      // If only one is in the order array, prioritize it
       if (aIndex !== -1) return -1;
       if (bIndex !== -1) return 1;
       
-      // If neither is in the order array, maintain original order
       return 0;
     });
   } else {
@@ -416,12 +404,10 @@ export default function CartScreen({ route, navigation }) {
           return item.product_id ? item.product_id.toString() : item.id.toString();
         }}
         renderItem={({ item }) => {
-          // Handle display for both cart items and pending order items
           const isCartItem = !item.product_id;
           const itemName = isCartItem ? item.name : item.product_name;
           const itemId = isCartItem ? item.id : item.product_id;
           const quantity = parseInt(item.quantity) || 1;
-          // Ensure consistent string representation for tracking updates
           const itemIdStr = itemId.toString();
           const isUpdating = updatingItems.has(itemIdStr);
           
@@ -430,7 +416,6 @@ export default function CartScreen({ route, navigation }) {
             unitPrice = parseFloat(item.unit_price || item.price);
             totalPrice = unitPrice * quantity;
           } else {
-            // Pending order item - use server provided values
             totalPrice = parseFloat(item.price);
             unitPrice = parseFloat(item.unit_price) || (quantity > 0 ? totalPrice / quantity : 0);
           }
@@ -442,14 +427,13 @@ export default function CartScreen({ route, navigation }) {
                   {itemName || `Product ${itemId}`}
                 </Text>
                 <Text style={styles.itemPrice}>
-                  ${unitPrice.toFixed(2)} × {quantity}
+                  ₹{unitPrice.toFixed(2)} × {quantity}
                 </Text>
                 <Text style={styles.itemTotal}>
-                  Total: ${totalPrice.toFixed(2)}
+                  Total: ₹{totalPrice.toFixed(2)}
                 </Text>
               </View>
               
-              {/* Quantity Controls - Only show for pending order items */}
               {!isCartItem && (
                 <View style={styles.quantityControls}>
                   <TouchableOpacity
@@ -495,10 +479,9 @@ export default function CartScreen({ route, navigation }) {
 
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>
-            Total: ${displayTotal.toFixed(2)}
+            Total: ₹{displayTotal.toFixed(2)}
           </Text>
           
-          {/* Debug info - remove in production */}
           {__DEV__ && (
             <Text style={styles.debugText}>
               {hasPendingItems ? 'Order Total (Updated)' : 'Local Cart Total'}
@@ -673,6 +656,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-// UpdatedCartScreen.tsx
-

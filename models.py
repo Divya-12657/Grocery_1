@@ -74,7 +74,7 @@ class OrderItem(db.Model):
 
     @property
     def total_price(self):
-        return self.quantity * self.unit_price
+        return self.quantity * self.unit_price  
 
 
 class Payment(db.Model):
