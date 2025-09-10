@@ -1,3 +1,5 @@
+
+
 // import React, { useState, useContext, useEffect } from 'react';
 // import {
 //   View,
@@ -5,7 +7,6 @@
 //   StyleSheet,
 //   TouchableOpacity,
 //   ScrollView,
-//   Image,
 //   TextInput,
 //   Modal,
 //   Alert,
@@ -17,18 +18,18 @@
 // import CONFIG from '../../../config';
 
 // export default function ProfileScreen({ navigation }) {
-//   const { user, logout } = useContext(AuthContext);
-//   const [editMode, setEditMode] = useState(false);
+//   // Updated to use your AuthContext structure
+//   const { token, role, logout } = useContext(AuthContext);
+
 //   const [editModalVisible, setEditModalVisible] = useState(false);
 //   const [notifications, setNotifications] = useState(true);
 //   const [darkMode, setDarkMode] = useState(false);
+
 //   const [userProfile, setUserProfile] = useState({
-//     name: user?.name || '',
-//     email: user?.email || '',
-//     phone: user?.phone || '',
-//     address: user?.address || '',
-//     city: user?.city || '',
-//     pincode: user?.pincode || '',
+//     name: '',
+//     email: '',
+//     phone: '',
+//     address: '',
 //   });
 
 //   const [orderStats, setOrderStats] = useState({
@@ -38,58 +39,246 @@
 //     memberSince: new Date().toLocaleDateString(),
 //   });
 
-//   useEffect(() => {
-//     fetchOrderStats();
-//   }, []);
+//   const [loadingProfile, setLoadingProfile] = useState(false);
+//   const [loadingStats, setLoadingStats] = useState(false);
+//   const [savingProfile, setSavingProfile] = useState(false);
 
-//   const fetchOrderStats = async () => {
+//   // Fixed authHeader function for your AuthContext structure
+//   const authHeader = () => {
+//     console.log('[ProfileScreen] Token from context:', token ? `${token.substring(0, 20)}...` : 'null');
+//     console.log('[ProfileScreen] Role from context:', role);
+    
+//     if (!token) {
+//       console.log('[ProfileScreen] No token available!');
+//       return { 'Content-Type': 'application/json' };
+//     }
+    
+//     // Remove "Bearer " if it's already in the token (fix for double Bearer issue)
+//     let cleanToken = token;
+//     if (token.startsWith('Bearer ')) {
+//       cleanToken = token.substring(7); // Remove "Bearer " prefix
+//       console.log('[ProfileScreen] Removed Bearer prefix from stored token');
+//     }
+    
+//     const headers = { 
+//       Authorization: `Bearer ${cleanToken}`,
+//       'Content-Type': 'application/json' 
+//     };
+    
+//     console.log('[ProfileScreen] Headers being sent:', {
+//       ...headers,
+//       Authorization: `Bearer ${cleanToken.substring(0, 20)}...`
+//     });
+    
+//     return headers;
+//   };
+
+//   // Fetch profile + stats when token is available
+//   useEffect(() => {
+//     if (!token) {
+//       console.log('[ProfileScreen] Waiting for token...');
+//       return;
+//     }
+//     console.log('[ProfileScreen] Token available, fetching data...');
+//     fetchUserProfile();
+//     fetchOrderStats();
+//   }, [token]);
+
+//   // GET /user/profile
+//   const fetchUserProfile = async () => {
+//     if (!token) {
+//       console.log('[ProfileScreen] No token, skipping profile fetch');
+//       return;
+//     }
+
+//     setLoadingProfile(true);
 //     try {
-//       // Replace with actual API call
-//       const response = await axios.get(`${CONFIG.API_URL}/user/stats/${user?.id}`);
-//       setOrderStats(response.data);
-//     } catch (error) {
-//       console.log('Error fetching stats:', error);
+//       console.log('[ProfileScreen] Fetching profile...');
+//       console.log('[ProfileScreen] API URL:', `${CONFIG.API_URL}/user/profile`);
+
+//       const res = await axios.get(`${CONFIG.API_URL}/user/profile`, {
+//         headers: authHeader(),
+//       });
+      
+//       console.log('[ProfileScreen] Profile fetch response:', res.data);
+//       const data = res.data || {};
+
+//       setUserProfile({
+//         name: data.name || '',
+//         email: data.email || '',
+//         phone: data.phone || '',
+//         address: data.address || '',
+//       });
+
+//       if (data.created_at) {
+//         setOrderStats((s) => ({
+//           ...s,
+//           memberSince: tryFormatDate(data.created_at),
+//         }));
+//       }
+//     } catch (err) {
+//       console.log('[ProfileScreen] fetchUserProfile error:', err);
+//       console.log('[ProfileScreen] Error response:', err?.response?.data);
+//       console.log('[ProfileScreen] Error status:', err?.response?.status);
+      
+//       if (err?.response?.status === 401) {
+//         Alert.alert(
+//           'Authentication Error', 
+//           'Your session has expired. Please log in again.',
+//           [
+//             {
+//               text: 'OK',
+//               onPress: () => {
+//                 logout(navigation);
+//               }
+//             }
+//           ]
+//         );
+//       } else {
+//         Alert.alert('Error', 'Failed to load profile data');
+//       }
+//     } finally {
+//       setLoadingProfile(false);
 //     }
 //   };
 
+//   // GET /user/stats - Modified since we don't have user.id from context
+//   const fetchOrderStats = async () => {
+//     if (!token) return;
+    
+//     setLoadingStats(true);
+//     try {
+//       // We'll need to get the user ID from the profile first, or modify this endpoint
+//       // For now, let's try to get stats without user ID - you might need to modify backend
+//       console.log('[ProfileScreen] Fetching user stats...');
+      
+//       // Try to get user stats - you may need to modify your backend to get user ID from token
+//       const res = await axios.get(`${CONFIG.API_URL}/user/stats`, {
+//         headers: authHeader(),
+//       });
+      
+//       const data = res.data || {};
+//       console.log('[ProfileScreen] Stats response:', data);
+
+//       setOrderStats((s) => ({
+//         totalOrders: data.totalOrders ?? s.totalOrders,
+//         totalSpent: data.totalSpent ?? s.totalSpent,
+//         favoriteCategory: data.favoriteCategory ?? s.favoriteCategory,
+//         memberSince: data.memberSince ?? s.memberSince,
+//       }));
+//     } catch (err) {
+//       console.log('[ProfileScreen] fetchOrderStats error:', err?.response?.data || err?.message);
+//       // Don't show alert for stats error, it's not critical
+//     } finally {
+//       setLoadingStats(false);
+//     }
+//   };
+
+//   // Handle edit button click
+//   const handleEditButtonClick = async () => {
+//     console.log('[ProfileScreen] Edit button clicked');
+//     await fetchUserProfile();
+//     setEditModalVisible(true);
+//   };
+
+//   // PUT /user/profile
 //   const handleSaveProfile = async () => {
 //     try {
-//       await axios.put(`${CONFIG.API_URL}/user/profile/`, userProfile);
+//       console.log('[ProfileScreen] Saving profile with data:', userProfile);
+      
+//       // Validate required fields
+//       if (!userProfile.name?.trim()) {
+//         Alert.alert('Error', 'Name is required');
+//         return;
+//       }
+      
+//       if (!userProfile.email?.trim()) {
+//         Alert.alert('Error', 'Email is required');
+//         return;
+//       }
+
+//       // Basic email validation
+//       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//       if (!emailRegex.test(userProfile.email.trim())) {
+//         Alert.alert('Error', 'Please enter a valid email address');
+//         return;
+//       }
+
+//       setSavingProfile(true);
+
+//       const payload = {
+//         name: userProfile.name.trim(),
+//         email: userProfile.email.trim().toLowerCase(),
+//         phone: userProfile.phone?.trim() || '',
+//         address: userProfile.address?.trim() || '',
+//       };
+
+//       console.log('[ProfileScreen] Sending PUT request with payload:', payload);
+
+//       const response = await axios.put(`${CONFIG.API_URL}/user/profile`, payload, {
+//         headers: authHeader(),
+//       });
+
+//       console.log('[ProfileScreen] PUT response:', response.data);
+
 //       setEditModalVisible(false);
 //       Alert.alert('Success', 'Profile updated successfully!');
-//     } catch (error) {
-//       Alert.alert('Error', 'Failed to update profile');
+
+//       // Refresh profile data after successful save
+//       await fetchUserProfile();
+//       await fetchOrderStats();
+
+//     } catch (err) {
+//       console.log('[ProfileScreen] handleSaveProfile error:', err);
+//       console.log('[ProfileScreen] Error response:', err?.response?.data);
+//       console.log('[ProfileScreen] Error status:', err?.response?.status);
+      
+//       if (err?.response?.status === 401) {
+//         Alert.alert(
+//           'Authentication Error', 
+//           'Your session has expired. Please log in again.',
+//           [
+//             {
+//               text: 'OK',
+//               onPress: () => logout(navigation)
+//             }
+//           ]
+//         );
+//       } else {
+//         const errorMessage = err?.response?.data?.message || 
+//                             err?.response?.data?.error || 
+//                             err?.message || 
+//                             'Failed to update profile';
+//         Alert.alert('Error', errorMessage);
+//       }
+//     } finally {
+//       setSavingProfile(false);
 //     }
 //   };
 
 //   const handleLogout = () => {
-//     Alert.alert(
-//       'Logout',
-//       'Are you sure you want to logout?',
-//       [
-//         { text: 'Cancel', style: 'cancel' },
-//         {
-//           text: 'Logout',
-//           style: 'destructive',
-//           onPress: () => {
-//             logout(); // Clears user/token from context
-//             navigation.reset({
-//               index: 0,
-//               routes: [{ name: 'Login' }], // Clears back stack and navigates to Login
-//             });
-//           },
+//     Alert.alert('Logout', 'Are you sure you want to logout?', [
+//       { text: 'Cancel', style: 'cancel' },
+//       {
+//         text: 'Logout',
+//         style: 'destructive',
+//         onPress: () => {
+//           logout();
+//           navigation.reset({
+//             index: 0,
+//             routes: [{ name: 'Login' }],
+//           });
 //         },
-//       ]
-//     );
+//       },
+//     ]);
 //   };
-
 
 //   const quickActions = [
 //     {
 //       id: 1,
 //       title: 'My Orders',
 //       icon: '📦',
-//       onPress: () => navigation.navigate('PastOrder', { userId: user?.id }),
+//       onPress: () => navigation.navigate('PastOrder'),
 //     },
 //     {
 //       id: 2,
@@ -119,7 +308,7 @@
 //       onPress: () => {
 //         const message = encodeURIComponent('Hi! I need help with my account.');
 //         const whatsappUrl = `whatsapp://send?phone=+919945277470&text=${message}`;
-//         Linking.openURL(whatsappUrl).catch(() => 
+//         Linking.openURL(whatsappUrl).catch(() =>
 //           Linking.openURL(`https://wa.me/919945277470?text=${message}`)
 //         );
 //       },
@@ -148,18 +337,18 @@
 //     <ScrollView style={styles.container}>
 //       {/* Header */}
 //       <View style={styles.header}>
-//         <TouchableOpacity 
-//           style={styles.backButton} 
-//           onPress={() => navigation.goBack()}
-//         >
+//         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
 //           <Text style={styles.backButtonText}>←</Text>
 //         </TouchableOpacity>
 //         <Text style={styles.headerTitle}>Profile</Text>
 //         <TouchableOpacity 
-//           style={styles.editButton} 
-//           onPress={() => setEditModalVisible(true)}
+//           style={[styles.editButton, loadingProfile && styles.disabledButton]} 
+//           onPress={handleEditButtonClick}
+//           disabled={loadingProfile}
 //         >
-//           <Text style={styles.editButtonText}>Edit</Text>
+//           <Text style={styles.editButtonText}>
+//             {loadingProfile ? 'Loading...' : 'Edit'}
+//           </Text>
 //         </TouchableOpacity>
 //       </View>
 
@@ -168,18 +357,20 @@
 //         <View style={styles.profileImageContainer}>
 //           <View style={styles.profileImage}>
 //             <Text style={styles.profileImageText}>
-//               {userProfile.name.charAt(0).toUpperCase()}
+//               {(userProfile?.name?.charAt?.(0) || '?').toUpperCase()}
 //             </Text>
 //           </View>
 //           <View style={styles.statusBadge}>
-//             <Text style={styles.statusText}>Premium</Text>
+//             <Text style={styles.statusText}>
+//               {role === 'Admin' ? 'Admin' : 'Premium'}
+//             </Text>
 //           </View>
 //         </View>
-        
+
 //         <View style={styles.profileInfo}>
-//           <Text style={styles.userName}>{userProfile.name}</Text>
-//           <Text style={styles.userEmail}>{userProfile.email}</Text>
-//           <Text style={styles.userPhone}>{userProfile.phone}</Text>
+//           <Text style={styles.userName}>{userProfile.name || 'N/A'}</Text>
+//           <Text style={styles.userEmail}>{userProfile.email || 'N/A'}</Text>
+//           <Text style={styles.userPhone}>{userProfile.phone || 'No phone number'}</Text>
 //           <Text style={styles.memberSince}>Member since {orderStats.memberSince}</Text>
 //         </View>
 //       </View>
@@ -187,15 +378,21 @@
 //       {/* Stats Cards */}
 //       <View style={styles.statsSection}>
 //         <View style={styles.statCard}>
-//           <Text style={styles.statNumber}>{orderStats.totalOrders}</Text>
+//           <Text style={styles.statNumber}>
+//             {loadingStats ? '...' : orderStats.totalOrders}
+//           </Text>
 //           <Text style={styles.statLabel}>Total Orders</Text>
 //         </View>
 //         <View style={styles.statCard}>
-//           <Text style={styles.statNumber}>₹{orderStats.totalSpent}</Text>
+//           <Text style={styles.statNumber}>
+//             {loadingStats ? '...' : `₹${orderStats.totalSpent}`}
+//           </Text>
 //           <Text style={styles.statLabel}>Total Spent</Text>
 //         </View>
 //         <View style={styles.statCard}>
-//           <Text style={styles.statNumber}>{orderStats.favoriteCategory}</Text>
+//           <Text style={styles.statNumber}>
+//             {loadingStats ? '...' : orderStats.favoriteCategory}
+//           </Text>
 //           <Text style={styles.statLabel}>Favorite Category</Text>
 //         </View>
 //       </View>
@@ -205,11 +402,7 @@
 //         <Text style={styles.sectionTitle}>Quick Actions</Text>
 //         <View style={styles.actionGrid}>
 //           {quickActions.map((action) => (
-//             <TouchableOpacity
-//               key={action.id}
-//               style={styles.actionCard}
-//               onPress={action.onPress}
-//             >
+//             <TouchableOpacity key={action.id} style={styles.actionCard} onPress={action.onPress}>
 //               <Text style={styles.actionIcon}>{action.icon}</Text>
 //               <Text style={styles.actionTitle}>{action.title}</Text>
 //             </TouchableOpacity>
@@ -230,7 +423,7 @@
 //               thumbColor={notifications ? '#fff' : '#f4f3f4'}
 //             />
 //           </View>
-          
+
 //           <View style={styles.settingItem}>
 //             <Text style={styles.settingLabel}>Dark Mode</Text>
 //             <Switch
@@ -248,11 +441,7 @@
 //         <Text style={styles.sectionTitle}>Support</Text>
 //         <View style={styles.supportContainer}>
 //           {supportOptions.map((option) => (
-//             <TouchableOpacity
-//               key={option.id}
-//               style={styles.supportItem}
-//               onPress={option.onPress}
-//             >
+//             <TouchableOpacity key={option.id} style={styles.supportItem} onPress={option.onPress}>
 //               <Text style={styles.supportIcon}>{option.icon}</Text>
 //               <Text style={styles.supportTitle}>{option.title}</Text>
 //               <Text style={styles.supportArrow}>→</Text>
@@ -261,118 +450,101 @@
 //         </View>
 //       </View>
 
-//       {/* Logout Button
-//       <TouchableOpacity style={styles.logoutButton} onPress={Login}>
+//       {/* Logout Button */}
+//       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
 //         <Text style={styles.logoutButtonText}>Logout</Text>
-//       </TouchableOpacity> */}
-
-// <TouchableOpacity
-//   style={styles.logoutButton}
-//   onPress={() => {
-//     logout();
-//     setTimeout(() => {
-//       navigation.reset({
-//         index: 0,
-//         routes: [{ name: 'Login' }],
-//       });
-//     }, 0);
-//   }}
-// >
-//   <Text style={styles.logoutButtonText}>Logout</Text>
-// </TouchableOpacity>
+//       </TouchableOpacity>
 
 //       {/* Edit Profile Modal */}
-//       <Modal
-//         visible={editModalVisible}
-//         animationType="slide"
-//         transparent
+//       <Modal 
+//         visible={editModalVisible} 
+//         animationType="slide" 
+//         transparent 
 //         onRequestClose={() => setEditModalVisible(false)}
 //       >
 //         <View style={styles.modalOverlay}>
 //           <View style={styles.modalContent}>
 //             <Text style={styles.modalTitle}>Edit Profile</Text>
-            
+
 //             <ScrollView style={styles.modalForm}>
 //               <View style={styles.inputGroup}>
-//                 <Text style={styles.inputLabel}>Name</Text>
-//                 <TextInput
-//                   style={styles.input}
-//                   value={userProfile.name}
-//                   onChangeText={(text) => setUserProfile({...userProfile, name: text})}
-//                   placeholder="Enter your name"
+//                 <Text style={styles.inputLabel}>Name *</Text>
+//                 <TextInput 
+//                   style={[
+//                     styles.input, 
+//                     !userProfile.name?.trim() && styles.inputError
+//                   ]} 
+//                   value={userProfile.name} 
+//                   onChangeText={(text) => setUserProfile({ ...userProfile, name: text })} 
+//                   placeholder="Enter your name" 
+//                   editable={!savingProfile}
 //                 />
 //               </View>
 
 //               <View style={styles.inputGroup}>
-//                 <Text style={styles.inputLabel}>Email</Text>
-//                 <TextInput
-//                   style={styles.input}
-//                   value={userProfile.email}
-//                   onChangeText={(text) => setUserProfile({...userProfile, email: text})}
-//                   placeholder="Enter your email"
-//                   keyboardType="email-address"
+//                 <Text style={styles.inputLabel}>Email *</Text>
+//                 <TextInput 
+//                   style={[
+//                     styles.input, 
+//                     !userProfile.email?.trim() && styles.inputError
+//                   ]} 
+//                   value={userProfile.email} 
+//                   onChangeText={(text) => setUserProfile({ ...userProfile, email: text })} 
+//                   placeholder="Enter your email" 
+//                   keyboardType="email-address" 
+//                   autoCapitalize="none"
+//                   editable={!savingProfile}
 //                 />
 //               </View>
 
 //               <View style={styles.inputGroup}>
 //                 <Text style={styles.inputLabel}>Phone</Text>
-//                 <TextInput
-//                   style={styles.input}
-//                   value={userProfile.phone}
-//                   onChangeText={(text) => setUserProfile({...userProfile, phone: text})}
-//                   placeholder="Enter your phone number"
-//                   keyboardType="phone-pad"
+//                 <TextInput 
+//                   style={styles.input} 
+//                   value={userProfile.phone} 
+//                   onChangeText={(text) => setUserProfile({ ...userProfile, phone: text })} 
+//                   placeholder="Enter your phone number" 
+//                   keyboardType="phone-pad" 
+//                   editable={!savingProfile}
 //                 />
 //               </View>
 
 //               <View style={styles.inputGroup}>
 //                 <Text style={styles.inputLabel}>Address</Text>
-//                 <TextInput
-//                   style={[styles.input, styles.textArea]}
-//                   value={userProfile.address}
-//                   onChangeText={(text) => setUserProfile({...userProfile, address: text})}
-//                   placeholder="Enter your address"
-//                   multiline
-//                   numberOfLines={3}
+//                 <TextInput 
+//                   style={[styles.input, styles.textArea]} 
+//                   value={userProfile.address} 
+//                   onChangeText={(text) => setUserProfile({ ...userProfile, address: text })} 
+//                   placeholder="Enter your address" 
+//                   multiline 
+//                   numberOfLines={3} 
+//                   editable={!savingProfile}
 //                 />
 //               </View>
 
-//               <View style={styles.inputRow}>
-//                 <View style={[styles.inputGroup, styles.halfWidth]}>
-//                   <Text style={styles.inputLabel}>City</Text>
-//                   <TextInput
-//                     style={styles.input}
-//                     value={userProfile.city}
-//                     onChangeText={(text) => setUserProfile({...userProfile, city: text})}
-//                     placeholder="City"
-//                   />
-//                 </View>
-
-//                 <View style={[styles.inputGroup, styles.halfWidth]}>
-//                   <Text style={styles.inputLabel}>Pincode</Text>
-//                   <TextInput
-//                     style={styles.input}
-//                     value={userProfile.pincode}
-//                     onChangeText={(text) => setUserProfile({...userProfile, pincode: text})}
-//                     placeholder="Pincode"
-//                     keyboardType="numeric"
-//                   />
-//                 </View>
-//               </View>
+//               <Text style={styles.requiredFieldsNote}>* Required fields</Text>
 //             </ScrollView>
 
 //             <View style={styles.modalButtons}>
-//               <TouchableOpacity
-//                 style={[styles.modalButton, styles.cancelButton]}
+//               <TouchableOpacity 
+//                 style={[styles.modalButton, styles.cancelButton]} 
 //                 onPress={() => setEditModalVisible(false)}
+//                 disabled={savingProfile}
 //               >
 //                 <Text style={styles.cancelButtonText}>Cancel</Text>
 //               </TouchableOpacity>
-//               <TouchableOpacity
-//                 style={[styles.modalButton, styles.saveButton]}
+//               <TouchableOpacity 
+//                 style={[
+//                   styles.modalButton, 
+//                   styles.saveButton, 
+//                   savingProfile && styles.disabledButton
+//                 ]} 
 //                 onPress={handleSaveProfile}
+//                 disabled={savingProfile}
 //               >
-//                 <Text style={styles.saveButtonText}>Save Changes</Text>
+//                 <Text style={styles.saveButtonText}>
+//                   {savingProfile ? 'Saving...' : 'Save Changes'}
+//                 </Text>
 //               </TouchableOpacity>
 //             </View>
 //           </View>
@@ -381,6 +553,16 @@
 //     </ScrollView>
 //   );
 // }
+
+// const tryFormatDate = (isoOrDateString) => {
+//   try {
+//     const d = new Date(isoOrDateString);
+//     if (isNaN(d.getTime())) return isoOrDateString;
+//     return d.toLocaleDateString();
+//   } catch {
+//     return isoOrDateString;
+//   }
+// };
 
 // const styles = StyleSheet.create({
 //   container: {
@@ -418,6 +600,9 @@
 //     color: '#fff',
 //     fontSize: 14,
 //     fontWeight: 'bold',
+//   },
+//   disabledButton: {
+//     opacity: 0.6,
 //   },
 //   profileSection: {
 //     backgroundColor: '#fff',
@@ -623,16 +808,19 @@
 //     fontSize: 16,
 //     backgroundColor: '#fff',
 //   },
+//   inputError: {
+//     borderColor: '#e74c3c',
+//     borderWidth: 2,
+//   },
 //   textArea: {
 //     height: 80,
 //     textAlignVertical: 'top',
 //   },
-//   inputRow: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//   },
-//   halfWidth: {
-//     width: '48%',
+//   requiredFieldsNote: {
+//     fontSize: 12,
+//     color: '#666',
+//     fontStyle: 'italic',
+//     marginTop: 10,
 //   },
 //   modalButtons: {
 //     flexDirection: 'row',
@@ -664,6 +852,7 @@
 //   },
 // });
 
+
 import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
@@ -671,7 +860,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   TextInput,
   Modal,
   Alert,
@@ -683,20 +871,18 @@ import axios from 'axios';
 import CONFIG from '../../../config';
 
 export default function ProfileScreen({ navigation }) {
-  const { user, logout } = useContext(AuthContext);
+  // Updated to use your AuthContext structure
+  const { token, role, logout } = useContext(AuthContext);
 
-  const [editMode, setEditMode] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
 
   const [userProfile, setUserProfile] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    address: user?.address || '',
-    // city: user?.city || '',
-    // pincode: user?.pincode || '',
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
   });
 
   const [orderStats, setOrderStats] = useState({
@@ -708,55 +894,74 @@ export default function ProfileScreen({ navigation }) {
 
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [loadingStats, setLoadingStats] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
-  
+  // Fixed authHeader function for your AuthContext structure
   const authHeader = () => {
-    const token = user?.token;
-    console.log('[ProfileScreen] Token being sent:', token);
+    console.log('[ProfileScreen] Token from context:', token ? `${token.substring(0, 20)}...` : 'null');
+    console.log('[ProfileScreen] Role from context:', role);
     
     if (!token) {
       console.log('[ProfileScreen] No token available!');
-      return {};
+      return { 'Content-Type': 'application/json' };
     }
     
-    return { 
-      Authorization: `Bearer ${token}`,  // Keep the Bearer prefix
+    // Remove "Bearer " if it's already in the token (fix for double Bearer issue)
+    let cleanToken = token;
+    if (token.startsWith('Bearer ')) {
+      cleanToken = token.substring(7); // Remove "Bearer " prefix
+      console.log('[ProfileScreen] Removed Bearer prefix from stored token');
+    }
+    
+    const headers = { 
+      Authorization: `Bearer ${cleanToken}`,
       'Content-Type': 'application/json' 
     };
+    
+    console.log('[ProfileScreen] Headers being sent:', {
+      ...headers,
+      Authorization: `Bearer ${cleanToken.substring(0, 20)}...`
+    });
+    
+    return headers;
   };
 
-  // Fetch profile + stats when user and token are available
+  // Fetch profile + stats when token is available
   useEffect(() => {
-    if (!user?.id || !user?.token) {
-      console.log('[ProfileScreen] waiting for user/token in context...');
+    if (!token) {
+      console.log('[ProfileScreen] Waiting for token...');
       return;
     }
-    // call both
+    console.log('[ProfileScreen] Token available, fetching data...');
     fetchUserProfile();
     fetchOrderStats();
-  }, [user?.id, user?.token]);
+  }, [token]);
 
   // GET /user/profile
   const fetchUserProfile = async () => {
+    if (!token) {
+      console.log('[ProfileScreen] No token, skipping profile fetch');
+      return;
+    }
+
     setLoadingProfile(true);
     try {
-      console.log('[ProfileScreen] GET /user/profile');
-      // Backend route in your app: GET /user/profile (uses token->current_user)
+      console.log('[ProfileScreen] Fetching profile...');
+      console.log('[ProfileScreen] API URL:', `${CONFIG.API_URL}/user/profile`);
+
       const res = await axios.get(`${CONFIG.API_URL}/user/profile`, {
         headers: authHeader(),
       });
+      
+      console.log('[ProfileScreen] Profile fetch response:', res.data);
       const data = res.data || {};
-      console.log('[ProfileScreen] profile response:', data);
 
-      // Map returned data into our local userProfile state safely
-      setUserProfile((prev) => ({
-        name: data.name ?? prev.name,
-        email: data.email ?? prev.email,
-        phone: data.phone ?? prev.phone,
-        address: data.address ?? prev.address,
-        // city: data.city ?? prev.city,
-        // pincode: data.pincode ?? prev.pincode,
-      }));
+      setUserProfile({
+        name: data.name || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        address: data.address || '',
+      });
 
       if (data.created_at) {
         setOrderStats((s) => ({
@@ -765,28 +970,49 @@ export default function ProfileScreen({ navigation }) {
         }));
       }
     } catch (err) {
-      console.log('[ProfileScreen] fetchUserProfile error:', err?.response?.data || err?.message);
-      // Don't spam the user with alerts on every small failure, but notify once.
-      // You can uncomment next line if you want an alert:
-      // Alert.alert('Error', 'Failed to load profile');
+      console.log('[ProfileScreen] fetchUserProfile error:', err);
+      console.log('[ProfileScreen] Error response:', err?.response?.data);
+      console.log('[ProfileScreen] Error status:', err?.response?.status);
+      
+      if (err?.response?.status === 401) {
+        Alert.alert(
+          'Authentication Error', 
+          'Your session has expired. Please log in again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                logout(navigation);
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to load profile data');
+      }
     } finally {
       setLoadingProfile(false);
     }
   };
 
-  // GET /user/stats/:id
+  // GET /user/stats - Modified since we don't have user.id from context
   const fetchOrderStats = async () => {
-    if (!user?.id) return;
+    if (!token) return;
+    
     setLoadingStats(true);
     try {
-      console.log('[ProfileScreen] GET /user/stats/' + user.id);
-      const res = await axios.get(`${CONFIG.API_URL}/user/stats/${user.id}`, {
+      // We'll need to get the user ID from the profile first, or modify this endpoint
+      // For now, let's try to get stats without user ID - you might need to modify backend
+      console.log('[ProfileScreen] Fetching user stats...');
+      
+      // Try to get user stats - you may need to modify your backend to get user ID from token
+      const res = await axios.get(`${CONFIG.API_URL}/user/stats`, {
         headers: authHeader(),
       });
+      
       const data = res.data || {};
-      console.log('[ProfileScreen] stats response:', data);
+      console.log('[ProfileScreen] Stats response:', data);
 
-      // Map response safely (keep defaults if missing)
       setOrderStats((s) => ({
         totalOrders: data.totalOrders ?? s.totalOrders,
         totalSpent: data.totalSpent ?? s.totalSpent,
@@ -795,14 +1021,15 @@ export default function ProfileScreen({ navigation }) {
       }));
     } catch (err) {
       console.log('[ProfileScreen] fetchOrderStats error:', err?.response?.data || err?.message);
+      // Don't show alert for stats error, it's not critical
     } finally {
       setLoadingStats(false);
     }
   };
 
-  // NEW: Handle edit button click - fetch fresh profile data
+  // Handle edit button click
   const handleEditButtonClick = async () => {
-    // Fetch latest profile data before opening edit modal
+    console.log('[ProfileScreen] Edit button clicked');
     await fetchUserProfile();
     setEditModalVisible(true);
   };
@@ -810,60 +1037,92 @@ export default function ProfileScreen({ navigation }) {
   // PUT /user/profile
   const handleSaveProfile = async () => {
     try {
-      console.log('[ProfileScreen] PUT /user/profile', userProfile);
+      console.log('[ProfileScreen] Saving profile with data:', userProfile);
+      
+      // Validate required fields
+      if (!userProfile.name?.trim()) {
+        Alert.alert('Error', 'Name is required');
+        return;
+      }
+      
+      if (!userProfile.email?.trim()) {
+        Alert.alert('Error', 'Email is required');
+        return;
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(userProfile.email.trim())) {
+        Alert.alert('Error', 'Please enter a valid email address');
+        return;
+      }
+
+      setSavingProfile(true);
+
       const payload = {
-        name: userProfile.name,
-        email: userProfile.email,
-        phone: userProfile.phone,
-        address: userProfile.address,
-        // city: userProfile.city,
-        // pincode: userProfile.pincode,
+        name: userProfile.name.trim(),
+        email: userProfile.email.trim().toLowerCase(),
+        phone: userProfile.phone?.trim() || '',
+        address: userProfile.address?.trim() || '',
       };
 
-      await axios.put(`${CONFIG.API_URL}/user/profile`, payload, {
+      console.log('[ProfileScreen] Sending PUT request with payload:', payload);
+
+      const response = await axios.put(`${CONFIG.API_URL}/user/profile`, payload, {
         headers: authHeader(),
       });
+
+      console.log('[ProfileScreen] PUT response:', response.data);
 
       setEditModalVisible(false);
       Alert.alert('Success', 'Profile updated successfully!');
 
-      // Refresh profile (and optionally stats) after save
-      fetchUserProfile();
-      fetchOrderStats();
+      // Refresh profile data after successful save
+      await fetchUserProfile();
+      await fetchOrderStats();
 
-      // If you store user data (name/email) in AuthContext and want to update it globally,
-      // call your context update method here (if available). Example:
-      // if (typeof updateUser === 'function') updateUser({ ...user, name: payload.name, email: payload.email });
     } catch (err) {
-      console.log('[ProfileScreen] handleSaveProfile error:', err?.response?.data || err?.message);
-      Alert.alert('Error', 'Failed to update profile');
+      console.log('[ProfileScreen] handleSaveProfile error:', err);
+      console.log('[ProfileScreen] Error response:', err?.response?.data);
+      console.log('[ProfileScreen] Error status:', err?.response?.status);
+      
+      if (err?.response?.status === 401) {
+        Alert.alert(
+          'Authentication Error', 
+          'Your session has expired. Please log in again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => logout(navigation)
+            }
+          ]
+        );
+      } else {
+        const errorMessage = err?.response?.data?.message || 
+                            err?.response?.data?.error || 
+                            err?.message || 
+                            'Failed to update profile';
+        Alert.alert('Error', errorMessage);
+      }
+    } finally {
+      setSavingProfile(false);
     }
   };
 
+  // Simplified logout function - just navigate to login screen
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: () => {
-          logout(); // Clears user/token from context
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          });
-        },
-      },
-    ]);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
   };
 
-  // quickActions, supportOptions and UI remain unchanged
   const quickActions = [
     {
       id: 1,
       title: 'My Orders',
       icon: '📦',
-      onPress: () => navigation.navigate('PastOrder', { userId: user?.id }),
+      onPress: () => navigation.navigate('PastOrder'),
     },
     {
       id: 2,
@@ -927,7 +1186,7 @@ export default function ProfileScreen({ navigation }) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         <TouchableOpacity 
-          style={styles.editButton} 
+          style={[styles.editButton, loadingProfile && styles.disabledButton]} 
           onPress={handleEditButtonClick}
           disabled={loadingProfile}
         >
@@ -946,14 +1205,16 @@ export default function ProfileScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>Premium</Text>
+            <Text style={styles.statusText}>
+              {role === 'Admin' ? 'Admin' : 'Premium'}
+            </Text>
           </View>
         </View>
 
         <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{userProfile.name}</Text>
-          <Text style={styles.userEmail}>{userProfile.email}</Text>
-          <Text style={styles.userPhone}>{userProfile.phone}</Text>
+          <Text style={styles.userName}>{userProfile.name || 'N/A'}</Text>
+          <Text style={styles.userEmail}>{userProfile.email || 'N/A'}</Text>
+          <Text style={styles.userPhone}>{userProfile.phone || 'No phone number'}</Text>
           <Text style={styles.memberSince}>Member since {orderStats.memberSince}</Text>
         </View>
       </View>
@@ -961,15 +1222,21 @@ export default function ProfileScreen({ navigation }) {
       {/* Stats Cards */}
       <View style={styles.statsSection}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{orderStats.totalOrders}</Text>
+          <Text style={styles.statNumber}>
+            {loadingStats ? '...' : orderStats.totalOrders}
+          </Text>
           <Text style={styles.statLabel}>Total Orders</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>₹{orderStats.totalSpent}</Text>
+          <Text style={styles.statNumber}>
+            {loadingStats ? '...' : `₹${orderStats.totalSpent}`}
+          </Text>
           <Text style={styles.statLabel}>Total Spent</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{orderStats.favoriteCategory}</Text>
+          <Text style={styles.statNumber}>
+            {loadingStats ? '...' : orderStats.favoriteCategory}
+          </Text>
           <Text style={styles.statLabel}>Favorite Category</Text>
         </View>
       </View>
@@ -1028,67 +1295,100 @@ export default function ProfileScreen({ navigation }) {
       </View>
 
       {/* Logout Button */}
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={() => {
-          logout();
-          setTimeout(() => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
-          }, 0);
-        }}
-      >
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
 
       {/* Edit Profile Modal */}
-      <Modal visible={editModalVisible} animationType="slide" transparent onRequestClose={() => setEditModalVisible(false)}>
+      <Modal 
+        visible={editModalVisible} 
+        animationType="slide" 
+        transparent 
+        onRequestClose={() => setEditModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Edit Profile</Text>
 
             <ScrollView style={styles.modalForm}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Name</Text>
-                <TextInput style={styles.input} value={userProfile.name} onChangeText={(text) => setUserProfile({ ...userProfile, name: text })} placeholder="Enter your name" />
+                <Text style={styles.inputLabel}>Name *</Text>
+                <TextInput 
+                  style={[
+                    styles.input, 
+                    !userProfile.name?.trim() && styles.inputError
+                  ]} 
+                  value={userProfile.name} 
+                  onChangeText={(text) => setUserProfile({ ...userProfile, name: text })} 
+                  placeholder="Enter your name" 
+                  editable={!savingProfile}
+                />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Email</Text>
-                <TextInput style={styles.input} value={userProfile.email} onChangeText={(text) => setUserProfile({ ...userProfile, email: text })} placeholder="Enter your email" keyboardType="email-address" />
+                <Text style={styles.inputLabel}>Email *</Text>
+                <TextInput 
+                  style={[
+                    styles.input, 
+                    !userProfile.email?.trim() && styles.inputError
+                  ]} 
+                  value={userProfile.email} 
+                  onChangeText={(text) => setUserProfile({ ...userProfile, email: text })} 
+                  placeholder="Enter your email" 
+                  keyboardType="email-address" 
+                  autoCapitalize="none"
+                  editable={!savingProfile}
+                />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Phone</Text>
-                <TextInput style={styles.input} value={userProfile.phone} onChangeText={(text) => setUserProfile({ ...userProfile, phone: text })} placeholder="Enter your phone number" keyboardType="phone-pad" />
+                <TextInput 
+                  style={styles.input} 
+                  value={userProfile.phone} 
+                  onChangeText={(text) => setUserProfile({ ...userProfile, phone: text })} 
+                  placeholder="Enter your phone number" 
+                  keyboardType="phone-pad" 
+                  editable={!savingProfile}
+                />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Address</Text>
-                <TextInput style={[styles.input, styles.textArea]} value={userProfile.address} onChangeText={(text) => setUserProfile({ ...userProfile, address: text })} placeholder="Enter your address" multiline numberOfLines={3} />
+                <TextInput 
+                  style={[styles.input, styles.textArea]} 
+                  value={userProfile.address} 
+                  onChangeText={(text) => setUserProfile({ ...userProfile, address: text })} 
+                  placeholder="Enter your address" 
+                  multiline 
+                  numberOfLines={3} 
+                  editable={!savingProfile}
+                />
               </View>
 
-              {/* <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.inputLabel}>City</Text>
-                  <TextInput style={styles.input} value={userProfile.city} onChangeText={(text) => setUserProfile({ ...userProfile, city: text })} placeholder="City" />
-                </View> */}
-
-                {/* <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.inputLabel}>Pincode</Text>
-                  <TextInput style={styles.input} value={userProfile.pincode} onChangeText={(text) => setUserProfile({ ...userProfile, pincode: text })} placeholder="Pincode" keyboardType="numeric" />
-                </View>
-              </View> */}
+              <Text style={styles.requiredFieldsNote}>* Required fields</Text>
             </ScrollView>
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={() => setEditModalVisible(false)}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={() => setEditModalVisible(false)}
+                disabled={savingProfile}
+              >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handleSaveProfile}>
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.modalButton, 
+                  styles.saveButton, 
+                  savingProfile && styles.disabledButton
+                ]} 
+                onPress={handleSaveProfile}
+                disabled={savingProfile}
+              >
+                <Text style={styles.saveButtonText}>
+                  {savingProfile ? 'Saving...' : 'Save Changes'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1144,6 +1444,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   profileSection: {
     backgroundColor: '#fff',
@@ -1349,16 +1652,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fff',
   },
+  inputError: {
+    borderColor: '#e74c3c',
+    borderWidth: 2,
+  },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
   },
-  inputRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  halfWidth: {
-    width: '48%',
+  requiredFieldsNote: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 10,
   },
   modalButtons: {
     flexDirection: 'row',

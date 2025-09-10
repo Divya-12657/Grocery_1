@@ -131,41 +131,183 @@ def login():
 @app.route('/user/profile', methods=['PUT'])
 @token_required
 def update_user_profile(current_user):
-    data = request.get_json()
-    user = User.query.get(current_user.id)
-    
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    # Update fields
-    user.name = data.get('name', user.name)
-    user.email = data.get('email', user.email)
-    user.phone = data.get('phone', user.phone)
-    user.address = data.get('address', user.address)
-    # user.city = data.get('city', 'Bangalore')
-    # user.pincode = data.get('pincode', '560085')
-    
-    db.session.commit()
-    
-    return jsonify({'message': 'Profile updated successfully'})
+    try:
+        data = request.get_json()
+        print(f"[UPDATE_PROFILE] User ID: {current_user.id}, Data: {data}")
+        
+        user = User.query.get(current_user.id)
+        if not user:
+            print(f"[UPDATE_PROFILE] User not found: {current_user.id}")
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Validate required fields
+        if not data.get('name', '').strip():
+            return jsonify({'error': 'Name is required'}), 400
+            
+        if not data.get('email', '').strip():
+            return jsonify({'error': 'Email is required'}), 400
+        
+        # Check if email is already taken by another user
+        email = data.get('email', '').strip().lower()
+        existing_user = User.query.filter(
+            User.email == email,
+            User.id != current_user.id
+        ).first()
+        
+        if existing_user:
+            return jsonify({'error': 'Email is already taken by another user'}), 400
+        
+        # Update fields
+        old_values = {
+            'name': user.name,
+            'email': user.email,
+            'phone': user.phone,
+            'address': user.address
+        }
+        
+        user.name = data.get('name', user.name).strip()
+        user.email = email
+        user.phone = data.get('phone', user.phone or '').strip()
+        user.address = data.get('address', user.address or '').strip()
+        
+        print(f"[UPDATE_PROFILE] Old values: {old_values}")
+        print(f"[UPDATE_PROFILE] New values: {{'name': user.name, 'email': user.email, 'phone': user.phone, 'address': user.address}}")
+        
+        db.session.commit()
+        print(f"[UPDATE_PROFILE] Profile updated successfully for user {user.id}")
+        
+        return jsonify({
+            'message': 'Profile updated successfully',
+            'user': {
+                'id': user.id,
+                'name': user.name,
+                'email': user.email,
+                'phone': user.phone,
+                'address': user.address
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"[UPDATE_PROFILE] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/user/profile', methods=['GET'])
 @token_required
 def get_user_profile(current_user):
-    user = User.query.get(current_user.id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    return jsonify({
-        'id': user.id,
-        'name': user.name,
-        'email': user.email,
-        'phone': user.phone,
-        'address': user.address,
-        # 'city': 'Bangalore',  # Add this field
-        # 'pincode': '560085',  # Add this field
-        'created_at': user.created_at.strftime('%Y-%m-%d'),
-    })
+    try:
+        print(f"[GET_PROFILE] Fetching profile for user ID: {current_user.id}")
+        
+        user = User.query.get(current_user.id)
+        if not user:
+            print(f"[GET_PROFILE] User not found: {current_user.id}")
+            return jsonify({'error': 'User not found'}), 404
+        
+        response_data = {
+            'id': user.id,
+            'name': user.name or '',
+            'email': user.email or '',
+            'phone': user.phone or '',
+            'address': user.address or '',
+            'created_at': user.created_at.strftime('%Y-%m-%d') if user.created_at else None,
+        }
+        
+        print(f"[GET_PROFILE] Returning data: {response_data}")
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        print(f"[GET_PROFILE] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Internal server error'}), 500
+#forgot password
+
+@app.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """Handle forgot password requests - simple version without email"""
+    try:
+        data = request.get_json()
+        print(f"Received data: {data}")  # Debug log
+        
+        email = data.get('email', '').strip().lower()
+        new_password = data.get('new_password', '').strip()
+        
+        print(f"Parsed email: '{email}'")  # Debug log
+        print(f"Parsed new_password: '{new_password}'")  # Debug log
+        
+        if not email:
+            return jsonify({'message': 'Email is required'}), 400
+            
+        if not new_password:
+            return jsonify({'message': 'New password is required'}), 400
+            
+        if len(new_password) < 6:
+            return jsonify({'message': 'Password must be at least 6 characters long'}), 400
+        
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({'message': 'No account found with that email address'}), 404
+        
+        # Update password directly
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+        
+        print(f"Password reset successful for user: {user.email}")
+        
+        return jsonify({
+            'message': 'Password has been reset successfully! You can now login with your new password.'
+        }), 200
+            
+    except Exception as e:
+        print(f"Forgot password error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'message': 'Internal server error'}), 500
+
+#User stats 
+
+@app.route('/user/stats', methods=['GET'])
+@token_required
+def get_current_user_stats(current_user):
+    """
+    Get stats for the current authenticated user (no user_id parameter needed)
+    """
+    try:
+        print(f"[USER_STATS] Fetching stats for current user: {current_user.id}")
+        
+        # Calculate total orders and total spent for current user
+        orders = Orders.query.filter_by(user_id=current_user.id, status='paid').all()
+        total_orders = len(orders)
+        total_spent = sum(float(order.total_amount) for order in orders)
+        
+        # Get user creation date
+        member_since = current_user.created_at.strftime('%Y-%m-%d') if current_user.created_at else None
+        
+        # You could calculate favorite category here if you track it
+        # For now, using default
+        favorite_category = 'Groceries'
+        
+        # TODO: Calculate actual favorite category from order history
+        # You could do something like:
+        # favorite_category = get_user_favorite_category(current_user.id)
+        
+        stats = {
+            'totalOrders': total_orders,
+            'totalSpent': total_spent,
+            'favoriteCategory': favorite_category,
+            'memberSince': member_since
+        }
+        
+        print(f"[USER_STATS] Returning stats: {stats}")
+        return jsonify(stats), 200
+        
+    except Exception as e:
+        print(f"[USER_STATS] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch user stats'}), 500
 
 # Adding category when you are the admin 
 
