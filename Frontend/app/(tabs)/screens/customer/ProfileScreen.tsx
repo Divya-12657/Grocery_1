@@ -1,5 +1,4 @@
 
-
 // import React, { useState, useContext, useEffect } from 'react';
 // import {
 //   View,
@@ -19,7 +18,8 @@
 
 // export default function ProfileScreen({ navigation }) {
 //   // Updated to use your AuthContext structure
-//   const { token, role, logout } = useContext(AuthContext);
+//   // const { token, role, logout } = useContext(AuthContext);
+//   const {token,logout } = useContext(AuthContext);
 
 //   const [editModalVisible, setEditModalVisible] = useState(false);
 //   const [notifications, setNotifications] = useState(true);
@@ -129,7 +129,7 @@
 //             {
 //               text: 'OK',
 //               onPress: () => {
-//                 logout(navigation);
+//                 logout(); // FIXED: Removed navigation parameter
 //               }
 //             }
 //           ]
@@ -240,7 +240,7 @@
 //           [
 //             {
 //               text: 'OK',
-//               onPress: () => logout(navigation)
+//               onPress: () => logout() // FIXED: Removed navigation parameter
 //             }
 //           ]
 //         );
@@ -256,22 +256,51 @@
 //     }
 //   };
 
-//   const handleLogout = () => {
-//     Alert.alert('Logout', 'Are you sure you want to logout?', [
-//       { text: 'Cancel', style: 'cancel' },
-//       {
-//         text: 'Logout',
-//         style: 'destructive',
-//         onPress: () => {
-//           logout();
-//           navigation.reset({
-//             index: 0,
-//             routes: [{ name: 'Login' }],
-//           });
-//         },
-//       },
-//     ]);
+//   const handleLogout = async () => {
+//     await logout();
+//     navigation.reset({
+//       index: 0,
+//       routes: [{ name: 'Home' }],
+//     });
 //   };
+
+//   // // FIXED: Updated logout handler using the same approach as AdminHomeScreen
+//   // const handleLogout = () => {
+//   //   console.log('[ProfileScreen] handleLogout called - button press detected!');
+    
+//   //   Alert.alert(
+//   //     'Logout',
+//   //     'Are you sure you want to logout?',
+//   //     [
+//   //       {
+//   //         text: 'Cancel',
+//   //         style: 'cancel',
+//   //         onPress: () => console.log('[ProfileScreen] User cancelled logout')
+//   //       },
+//   //       {
+//   //         text: 'Logout',
+//   //         style: 'destructive',
+//   //         onPress: async () => {
+//   //           console.log('[ProfileScreen] User confirmed logout');
+//   //           try {
+//   //             console.log('[ProfileScreen] About to call logout from AuthContext...');
+//   //             // Clear credentials first
+//   //             await logout();
+//   //             console.log('[ProfileScreen] Logout completed, now navigating...');
+//   //             // Then manually navigate to Home screen (same as AdminHomeScreen approach)
+//   //             navigation.reset({
+//   //               index: 0,
+//   //               routes: [{ name: 'Home' }],
+//   //             });
+//   //           } catch (error) {
+//   //             console.error('[ProfileScreen] Logout error:', error);
+//   //             Alert.alert('Error', 'Failed to logout. Please try again.');
+//   //           }
+//   //         },
+//   //       },
+//   //     ]
+//   //   );
+//   // };
 
 //   const quickActions = [
 //     {
@@ -450,8 +479,14 @@
 //         </View>
 //       </View>
 
-//       {/* Logout Button */}
-//       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+//       {/* FIXED: Logout Button */}
+//       <TouchableOpacity 
+//         style={styles.logoutButton} 
+//         onPress={() => {
+//           console.log('[ProfileScreen] Logout button touched!');
+//           handleLogout();
+//         }}
+//       >
 //         <Text style={styles.logoutButtonText}>Logout</Text>
 //       </TouchableOpacity>
 
@@ -852,7 +887,6 @@
 //   },
 // });
 
-
 import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
@@ -871,8 +905,8 @@ import axios from 'axios';
 import CONFIG from '../../../config';
 
 export default function ProfileScreen({ navigation }) {
-  // Updated to use your AuthContext structure
-  const { token, role, logout } = useContext(AuthContext);
+  // SIMPLE: Only get what we need
+  const { token,logout } = useContext(AuthContext);
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [notifications, setNotifications] = useState(true);
@@ -896,64 +930,37 @@ export default function ProfileScreen({ navigation }) {
   const [loadingStats, setLoadingStats] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Fixed authHeader function for your AuthContext structure
   const authHeader = () => {
-    console.log('[ProfileScreen] Token from context:', token ? `${token.substring(0, 20)}...` : 'null');
-    console.log('[ProfileScreen] Role from context:', role);
-    
     if (!token) {
-      console.log('[ProfileScreen] No token available!');
       return { 'Content-Type': 'application/json' };
     }
     
-    // Remove "Bearer " if it's already in the token (fix for double Bearer issue)
     let cleanToken = token;
     if (token.startsWith('Bearer ')) {
-      cleanToken = token.substring(7); // Remove "Bearer " prefix
-      console.log('[ProfileScreen] Removed Bearer prefix from stored token');
+      cleanToken = token.substring(7);
     }
     
-    const headers = { 
+    return { 
       Authorization: `Bearer ${cleanToken}`,
       'Content-Type': 'application/json' 
     };
-    
-    console.log('[ProfileScreen] Headers being sent:', {
-      ...headers,
-      Authorization: `Bearer ${cleanToken.substring(0, 20)}...`
-    });
-    
-    return headers;
   };
 
-  // Fetch profile + stats when token is available
   useEffect(() => {
-    if (!token) {
-      console.log('[ProfileScreen] Waiting for token...');
-      return;
-    }
-    console.log('[ProfileScreen] Token available, fetching data...');
+    if (!token) return;
     fetchUserProfile();
     fetchOrderStats();
   }, [token]);
 
-  // GET /user/profile
   const fetchUserProfile = async () => {
-    if (!token) {
-      console.log('[ProfileScreen] No token, skipping profile fetch');
-      return;
-    }
+    if (!token) return;
 
     setLoadingProfile(true);
     try {
-      console.log('[ProfileScreen] Fetching profile...');
-      console.log('[ProfileScreen] API URL:', `${CONFIG.API_URL}/user/profile`);
-
       const res = await axios.get(`${CONFIG.API_URL}/user/profile`, {
         headers: authHeader(),
       });
       
-      console.log('[ProfileScreen] Profile fetch response:', res.data);
       const data = res.data || {};
 
       setUserProfile({
@@ -970,22 +977,11 @@ export default function ProfileScreen({ navigation }) {
         }));
       }
     } catch (err) {
-      console.log('[ProfileScreen] fetchUserProfile error:', err);
-      console.log('[ProfileScreen] Error response:', err?.response?.data);
-      console.log('[ProfileScreen] Error status:', err?.response?.status);
-      
       if (err?.response?.status === 401) {
         Alert.alert(
-          'Authentication Error', 
-          'Your session has expired. Please log in again.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                logout(navigation);
-              }
-            }
-          ]
+          'Session Expired', 
+          'Please log in again.',
+          [{ text: 'OK', onPress: () => logout() }]
         );
       } else {
         Alert.alert('Error', 'Failed to load profile data');
@@ -995,23 +991,16 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  // GET /user/stats - Modified since we don't have user.id from context
   const fetchOrderStats = async () => {
     if (!token) return;
     
     setLoadingStats(true);
     try {
-      // We'll need to get the user ID from the profile first, or modify this endpoint
-      // For now, let's try to get stats without user ID - you might need to modify backend
-      console.log('[ProfileScreen] Fetching user stats...');
-      
-      // Try to get user stats - you may need to modify your backend to get user ID from token
       const res = await axios.get(`${CONFIG.API_URL}/user/stats`, {
         headers: authHeader(),
       });
       
       const data = res.data || {};
-      console.log('[ProfileScreen] Stats response:', data);
 
       setOrderStats((s) => ({
         totalOrders: data.totalOrders ?? s.totalOrders,
@@ -1020,26 +1009,19 @@ export default function ProfileScreen({ navigation }) {
         memberSince: data.memberSince ?? s.memberSince,
       }));
     } catch (err) {
-      console.log('[ProfileScreen] fetchOrderStats error:', err?.response?.data || err?.message);
-      // Don't show alert for stats error, it's not critical
+      // Ignore stats errors - not critical
     } finally {
       setLoadingStats(false);
     }
   };
 
-  // Handle edit button click
   const handleEditButtonClick = async () => {
-    console.log('[ProfileScreen] Edit button clicked');
     await fetchUserProfile();
     setEditModalVisible(true);
   };
 
-  // PUT /user/profile
   const handleSaveProfile = async () => {
     try {
-      console.log('[ProfileScreen] Saving profile with data:', userProfile);
-      
-      // Validate required fields
       if (!userProfile.name?.trim()) {
         Alert.alert('Error', 'Name is required');
         return;
@@ -1050,7 +1032,6 @@ export default function ProfileScreen({ navigation }) {
         return;
       }
 
-      // Basic email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(userProfile.email.trim())) {
         Alert.alert('Error', 'Please enter a valid email address');
@@ -1066,36 +1047,22 @@ export default function ProfileScreen({ navigation }) {
         address: userProfile.address?.trim() || '',
       };
 
-      console.log('[ProfileScreen] Sending PUT request with payload:', payload);
-
-      const response = await axios.put(`${CONFIG.API_URL}/user/profile`, payload, {
+      await axios.put(`${CONFIG.API_URL}/user/profile`, payload, {
         headers: authHeader(),
       });
-
-      console.log('[ProfileScreen] PUT response:', response.data);
 
       setEditModalVisible(false);
       Alert.alert('Success', 'Profile updated successfully!');
 
-      // Refresh profile data after successful save
       await fetchUserProfile();
       await fetchOrderStats();
 
     } catch (err) {
-      console.log('[ProfileScreen] handleSaveProfile error:', err);
-      console.log('[ProfileScreen] Error response:', err?.response?.data);
-      console.log('[ProfileScreen] Error status:', err?.response?.status);
-      
       if (err?.response?.status === 401) {
         Alert.alert(
-          'Authentication Error', 
-          'Your session has expired. Please log in again.',
-          [
-            {
-              text: 'OK',
-              onPress: () => logout(navigation)
-            }
-          ]
+          'Session Expired', 
+          'Please log in again.',
+          [{ text: 'OK', onPress: () => logout() }]
         );
       } else {
         const errorMessage = err?.response?.data?.message || 
@@ -1109,11 +1076,12 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  // Simplified logout function - just navigate to login screen
-  const handleLogout = () => {
+  // SIMPLE LOGOUT - Just clear credentials, let AppNavigator handle the rest
+  const handleLogout = async () => {
+    await logout();
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Login' }],
+      routes: [{ name: 'Home' }],
     });
   };
 
@@ -1205,9 +1173,7 @@ export default function ProfileScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>
-              {role === 'Admin' ? 'Admin' : 'Premium'}
-            </Text>
+            <Text style={styles.statusText}>User</Text>
           </View>
         </View>
 
@@ -1294,7 +1260,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Logout Button */}
+      {/* Simple Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
@@ -1314,10 +1280,7 @@ export default function ProfileScreen({ navigation }) {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Name *</Text>
                 <TextInput 
-                  style={[
-                    styles.input, 
-                    !userProfile.name?.trim() && styles.inputError
-                  ]} 
+                  style={[styles.input, !userProfile.name?.trim() && styles.inputError]} 
                   value={userProfile.name} 
                   onChangeText={(text) => setUserProfile({ ...userProfile, name: text })} 
                   placeholder="Enter your name" 
@@ -1328,10 +1291,7 @@ export default function ProfileScreen({ navigation }) {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Email *</Text>
                 <TextInput 
-                  style={[
-                    styles.input, 
-                    !userProfile.email?.trim() && styles.inputError
-                  ]} 
+                  style={[styles.input, !userProfile.email?.trim() && styles.inputError]} 
                   value={userProfile.email} 
                   onChangeText={(text) => setUserProfile({ ...userProfile, email: text })} 
                   placeholder="Enter your email" 
@@ -1378,11 +1338,7 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[
-                  styles.modalButton, 
-                  styles.saveButton, 
-                  savingProfile && styles.disabledButton
-                ]} 
+                style={[styles.modalButton, styles.saveButton, savingProfile && styles.disabledButton]} 
                 onPress={handleSaveProfile}
                 disabled={savingProfile}
               >

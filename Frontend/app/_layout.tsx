@@ -185,6 +185,8 @@ import CartScreen from './(tabs)/screens/customer/CartScreen';
 import PaymentScreen from './(tabs)/screens/customer/PaymentScreen';
 import ProfileScreen from './(tabs)/screens/customer/ProfileScreen';
 import PastOrderScreen from './(tabs)/screens/customer/PastOrderScreen';
+import { CartProvider } from "./(tabs)/screens/customer/CartContext"; 
+
 
 
 import AdminHomeScreen from './(tabs)/screens/admin/HomeScreen';
@@ -244,7 +246,9 @@ function AppNavigator() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppNavigator />
+      <CartProvider>
+        <AppNavigator />
+      </CartProvider>
     </AuthProvider>
   );
 }

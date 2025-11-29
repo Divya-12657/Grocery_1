@@ -20,7 +20,7 @@ class User(db.Model):
     orders = db.relationship('Orders', backref='users', lazy=True)
 
 class Category(db.Model):
-    # __tablename__ = 'category'
+    __tablename__ = 'category'
     __table_args__ = {'schema': 'grocery_market'}
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
